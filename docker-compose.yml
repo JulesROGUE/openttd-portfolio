@@ -1,0 +1,14 @@
+# OpenTTD Portfolio (WebAssembly) : docker compose up -d --build
+# Client servi sous /openttd/ sur 127.0.0.1:8084 (le nginx de l'hôte fait la terminaison TLS).
+name: openttd-portfolio
+
+services:
+  openttd-portfolio:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.web
+    image: openttd-portfolio-web:latest
+    container_name: openttd-portfolio
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:8084:8080"

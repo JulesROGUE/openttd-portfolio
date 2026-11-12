@@ -1,0 +1,21 @@
+html, body { margin: 0; height: 100%; overflow: hidden; background: #000; }
+/* OpenTTD dessine lui-même son curseur */
+#canvas { position: absolute; inset: 0; display: block; width: 100%; height: 100%; outline: none; cursor: none; }
+#loading {
+  position: fixed; inset: 0; z-index: 5; display: flex; align-items: center; justify-content: center;
+  background: radial-gradient(circle at 50% 40%, #1c2b44, #05080e 75%);
+  font: 13px sans-serif; color: #c9d6e6;
+}
+.ld-box { width: min(420px, 86vw); text-align: center; }
+.ld-title { font-size: 16px; font-weight: bold; color: #fff; margin-bottom: 14px; }
+.ld-step { margin-bottom: 8px; color: #9fc4ee; }
+.ld-bar { height: 14px; border: 1px solid #0b1220; border-radius: 2px; background: #0f1724;
+  box-shadow: inset 0 1px 3px rgba(0,0,0,.6); overflow: hidden; }
+.ld-fill { height: 100%; width: 0; background: linear-gradient(180deg, #8ab4ea, #3f74ba 55%, #2f62ad);
+  transition: width .2s ease; }
+.ld-fill.indeterminate { width: 35% !important; animation: ld-slide 1.2s ease-in-out infinite; }
+@keyframes ld-slide { 0% { margin-left: -35%; } 100% { margin-left: 100%; } }
+.ld-detail { margin-top: 8px; font-variant-numeric: tabular-nums; }
+.ld-status { margin-top: 4px; font: 11px monospace; color: #6f819a; }
+.ld-error { color: #ff9a8a; }
+#loading.done { display: none; }

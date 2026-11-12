@@ -1,0 +1,270 @@
+diff --git a/CMakeLists.txt b/CMakeLists.txt
+index 2891bee..269ed2f 100644
+--- a/CMakeLists.txt
++++ b/CMakeLists.txt
+@@ -366,36 +366,13 @@ if(EMSCRIPTEN)
+     add_definitions(-s DISABLE_EXCEPTION_CATCHING=0)
+ 
+     # Export functions to Javascript.
+-    target_link_libraries(WASM::WASM INTERFACE "-s EXPORTED_FUNCTIONS='[\"_main\", \"_em_openttd_add_server\"]' -s EXPORTED_RUNTIME_METHODS='[\"cwrap\"]'")
+-
+-    # Preload all the files we generate during build.
+-    # As we do not compile with FreeType / FontConfig, we also have no way to
+-    # render several languages (like Chinese, ..), so where do you draw the
+-    # line what languages to include and which not? In the end, especially as
+-    # the more languages you add the slower downloading becomes, we decided to
+-    # only ship the English language.
+-    target_link_libraries(WASM::WASM INTERFACE "--preload-file ${CMAKE_BINARY_DIR}/baseset@/baseset")
+-    target_link_libraries(WASM::WASM INTERFACE "--preload-file ${CMAKE_BINARY_DIR}/lang/english.lng@/lang/english.lng")
+-    target_link_libraries(WASM::WASM INTERFACE "--preload-file ${CMAKE_SOURCE_DIR}/bin/ai@/ai")
+-    target_link_libraries(WASM::WASM INTERFACE "--preload-file ${CMAKE_SOURCE_DIR}/bin/game@/game")
+-    # Documentation files for the in-game text file viewer
+-    target_link_libraries(WASM::WASM INTERFACE "--preload-file ${CMAKE_SOURCE_DIR}/README.md@/README.md")
+-    target_link_libraries(WASM::WASM INTERFACE "--preload-file ${CMAKE_SOURCE_DIR}/CREDITS.md@/CREDITS.md")
+-    target_link_libraries(WASM::WASM INTERFACE "--preload-file ${CMAKE_SOURCE_DIR}/CONTRIBUTING.md@/CONTRIBUTING.md")
+-    target_link_libraries(WASM::WASM INTERFACE "--preload-file ${CMAKE_SOURCE_DIR}/COPYING.md@/COPYING.md")
+-    target_link_libraries(WASM::WASM INTERFACE "--preload-file ${CMAKE_SOURCE_DIR}/known-bugs.md@/known-bugs.md")
+-    target_link_libraries(WASM::WASM INTERFACE "--preload-file ${CMAKE_SOURCE_DIR}/changelog.md@/changelog.md")
+-    target_link_libraries(WASM::WASM INTERFACE "--preload-file ${CMAKE_SOURCE_DIR}/docs/admin_network.md@/docs/admin_network.md")
+-    target_link_libraries(WASM::WASM INTERFACE "--preload-file ${CMAKE_SOURCE_DIR}/docs/debugging_desyncs.md@/docs/debugging_desyncs.md")
+-    target_link_libraries(WASM::WASM INTERFACE "--preload-file ${CMAKE_SOURCE_DIR}/docs/desync.md@/docs/desync.md")
+-    target_link_libraries(WASM::WASM INTERFACE "--preload-file ${CMAKE_SOURCE_DIR}/docs/directory_structure.md@/docs/directory_structure.md")
+-    target_link_libraries(WASM::WASM INTERFACE "--preload-file ${CMAKE_SOURCE_DIR}/docs/eints.md@/docs/eints.md")
+-    target_link_libraries(WASM::WASM INTERFACE "--preload-file ${CMAKE_SOURCE_DIR}/docs/fonts.md@/docs/fonts.md")
+-    target_link_libraries(WASM::WASM INTERFACE "--preload-file ${CMAKE_SOURCE_DIR}/docs/linkgraph.md@/docs/linkgraph.md")
+-    target_link_libraries(WASM::WASM INTERFACE "--preload-file ${CMAKE_SOURCE_DIR}/docs/logging_and_performance_metrics.md@/docs/logging_and_performance_metrics.md")
+-    target_link_libraries(WASM::WASM INTERFACE "--preload-file ${CMAKE_SOURCE_DIR}/docs/multiplayer.md@/docs/multiplayer.md")
+-    target_link_libraries(WASM::WASM INTERFACE "--preload-file ${CMAKE_SOURCE_DIR}/docs/savegame_format.md@/docs/savegame_format.md")
+-    target_link_libraries(WASM::WASM INTERFACE "--preload-file ${CMAKE_SOURCE_DIR}/docs/symbol_server.md@/docs/symbol_server.md")
++    # OpenTTD Portfolio : pf_load_sounds (bruitages chargés après la carte), FS et ccall
++    # pour la coquille web.
++    target_link_libraries(WASM::WASM INTERFACE "-s EXPORTED_FUNCTIONS='[\"_main\", \"_em_openttd_add_server\", \"_pf_load_sounds\"]' -s EXPORTED_RUNTIME_METHODS='[\"cwrap\", \"ccall\", \"FS\"]'")
++
++    # OpenTTD Portfolio : les données (jeux de base, langue, carte, réglages) sont
++    # empaquetées à part par scripts/build-web.sh (file_packager), comme pour Cube 2.
++    target_link_libraries(WASM::WASM INTERFACE "-s FORCE_FILESYSTEM=1")
+ 
+     # We use IDBFS for persistent storage.
+     target_link_libraries(WASM::WASM INTERFACE "-lidbfs.js")
+diff --git a/src/CMakeLists.txt b/src/CMakeLists.txt
+index 16215e7..b238e85 100644
+--- a/src/CMakeLists.txt
++++ b/src/CMakeLists.txt
+@@ -29,6 +29,12 @@ add_subdirectory(timer)
+ add_subdirectory(video)
+ add_subdirectory(widgets)
+ 
++add_files(
++    portfolio_data.h
++    portfolio_gui.cpp
++    portfolio_gui.h
++)
++
+ add_files(
+     viewport_sprite_sorter_sse4.cpp
+     CONDITION SSE_FOUND
+diff --git a/src/hotkeys.cpp b/src/hotkeys.cpp
+index 68a2445..ac34de3 100644
+--- a/src/hotkeys.cpp
++++ b/src/hotkeys.cpp
+@@ -342,6 +342,9 @@ void SaveHotkeysToConfig()
+ 
+ void HandleGlobalHotkeys([[maybe_unused]] char32_t key, uint16_t keycode)
+ {
++	/* OpenTTD Portfolio : aucun raccourci global (pas de construction ni de gestion). */
++	if (_game_mode == GM_NORMAL) return;
++
+ 	for (HotkeyList *list : *_hotkey_lists) {
+ 		if (list->global_hotkey_handler == nullptr) continue;
+ 
+diff --git a/src/lang/english.txt b/src/lang/english.txt
+index 0b32a4a..5022f41 100644
+--- a/src/lang/english.txt
++++ b/src/lang/english.txt
+@@ -5976,3 +5976,14 @@ STR_BADGE_CONFIG_PREVIEW                                        :Preview Image
+ STR_BADGE_CONFIG_NAME                                           :Name
+ STR_BADGE_FILTER_ANY_LABEL                                      :Any {STRING}
+ STR_BADGE_FILTER_IS_LABEL                                       :{STRING} is {STRING}
++
++# OpenTTD Portfolio
++STR_PORTFOLIO_SHOW_ON_MAP                                       :Show on map
++STR_PORTFOLIO_SHOW_ON_MAP_TOOLTIP                               :{BLACK}Scroll the map to this town
++STR_PORTFOLIO_OPEN_LINK                                         :Open link
++STR_PORTFOLIO_OPEN_LINK_TOOLTIP                                 :{BLACK}Open the project's link in a new browser tab
++STR_PORTFOLIO_COLLABORATORS                                     :Collaborators
++STR_PORTFOLIO_COLLABORATORS_TOOLTIP                             :{BLACK}People who worked on the projects with Jules
++STR_PORTFOLIO_COLLABORATORS_CAPTION                             :{WHITE}Collaborators
++STR_PORTFOLIO_COLLABORATORS_LIST_TOOLTIP                        :{BLACK}Click a collaborator to open the project
++STR_PORTFOLIO_PROJECT_LIST_TOOLTIP                              :{BLACK}Click a project to go to its town
+diff --git a/src/main_gui.cpp b/src/main_gui.cpp
+index f54c7d6..4872efb 100644
+--- a/src/main_gui.cpp
++++ b/src/main_gui.cpp
+@@ -278,6 +278,15 @@ struct MainWindow : Window
+ 
+ 	EventState OnHotkey(int hotkey) override
+ 	{
++		/* OpenTTD Portfolio : ni console, ni sortie, ni triche, ni outils de débogage. */
++		switch (hotkey) {
++			case GHK_CENTER: case GHK_CENTER_ZOOM: case GHK_DELETE_WINDOWS: case GHK_DELETE_NONVITAL_WINDOWS:
++			case GHK_CLOSE_ERROR: case GHK_REFRESH_SCREEN:
++				break;
++			default:
++				return ES_NOT_HANDLED;
++		}
++
+ 		if (hotkey == GHK_QUIT) {
+ 			HandleExitGameRequest();
+ 			return ES_HANDLED;
+@@ -581,6 +590,13 @@ void SetupColoursAndInitialWindow()
+  */
+ void ShowVitalWindows()
+ {
++	/* OpenTTD Portfolio : pas de barre d'outils en partie, seulement la barre d'état
++	 * (date et argent). La fenêtre d'accueil est ouverte après le chargement. */
++	if (_game_mode == GM_NORMAL) {
++		ShowStatusBar();
++		return;
++	}
++
+ 	AllocateToolbar();
+ 
+ 	/* Status bad only for normal games */
+diff --git a/src/music/CMakeLists.txt b/src/music/CMakeLists.txt
+index cf60e78..7129629 100644
+--- a/src/music/CMakeLists.txt
++++ b/src/music/CMakeLists.txt
+@@ -37,6 +37,12 @@ if(NOT OPTION_DEDICATED)
+         CONDITION HAIKU
+     )
+ 
++    add_files(
++        emscripten_m.cpp
++        emscripten_m.h
++        CONDITION EMSCRIPTEN
++    )
++
+     add_files(
+         midi.h
+         midifile.cpp
+diff --git a/src/news_gui.cpp b/src/news_gui.cpp
+index 9f92375..daf32a5 100644
+--- a/src/news_gui.cpp
++++ b/src/news_gui.cpp
+@@ -900,6 +900,8 @@ std::string NewsItem::GetStatusText() const
+ void AddNewsItem(EncodedString &&headline, NewsType type, NewsStyle style, NewsFlags flags, NewsReference ref1, NewsReference ref2, std::unique_ptr<NewsAllocatedData> &&data, AdviceType advice_type)
+ {
+ 	if (_game_mode == GM_MENU) return;
++	/* OpenTTD Portfolio : pas de journal ni d'actualités. */
++	if (_game_mode == GM_NORMAL) return;
+ 
+ 	/* Create new news item node */
+ 	_news.emplace_front(std::move(headline), type, style, flags, ref1, ref2, std::move(data), advice_type);
+diff --git a/src/openttd.cpp b/src/openttd.cpp
+index 7d585b0..6371e1f 100644
+--- a/src/openttd.cpp
++++ b/src/openttd.cpp
+@@ -861,8 +861,10 @@ static void MakeNewGameDone()
+ {
+ 	SettingsDisableElrail(_settings_game.vehicle.disable_elrails);
+ 
+-	/* In a dedicated server, the server does not play */
+-	if (!VideoDriver::GetInstance()->HasGUI()) {
++	/* In a dedicated server, the server does not play.
++	 * OpenTTD Portfolio : la génération de la carte (sans affichage) crée quand même la
++	 * compagnie du joueur, qui possède les bus de la carte. */
++	if (!VideoDriver::GetInstance()->HasGUI() && getenv("OPENTTD_PORTFOLIO_PREGEN") == nullptr) {
+ 		OnStartGame(true);
+ 		if (_settings_client.gui.pause_on_newgame) Command<CMD_PAUSE>::Post(PauseMode::Normal, true);
+ 		return;
+diff --git a/src/saveload/afterload.cpp b/src/saveload/afterload.cpp
+index 2f9e10c..28d9c49 100644
+--- a/src/saveload/afterload.cpp
++++ b/src/saveload/afterload.cpp
+@@ -252,6 +252,9 @@ static void InitializeWindowsAndCaches()
+ 	ClearAllCachedNames();
+ 	UpdateAllVirtCoords();
+ 	ResetViewportAfterLoadGame();
++	/* OpenTTD Portfolio : vue de départ et fenêtre d'accueil. */
++	extern void PortfolioAfterLoad();
++	PortfolioAfterLoad();
+ 
+ 	for (Company *c : Company::Iterate()) {
+ 		/* For each company, verify (while loading a scenario) that the inauguration date is the current year and set it
+diff --git a/src/statusbar_gui.cpp b/src/statusbar_gui.cpp
+index fa05885..ee9afc9 100644
+--- a/src/statusbar_gui.cpp
++++ b/src/statusbar_gui.cpp
+@@ -184,6 +184,9 @@ struct StatusBarWindow : Window {
+ 
+ 	void OnClick([[maybe_unused]] Point pt, WidgetID widget, [[maybe_unused]] int click_count) override
+ 	{
++		/* OpenTTD Portfolio : barre d'état en lecture seule. */
++		if (_game_mode == GM_NORMAL) return;
++
+ 		switch (widget) {
+ 			case WID_S_MIDDLE: ShowLastNewsMessage(); break;
+ 			case WID_S_RIGHT:  if (_local_company != COMPANY_SPECTATOR) ShowCompanyFinances(_local_company); break;
+diff --git a/src/tile_cmd.h b/src/tile_cmd.h
+index 7ce4803..e1ffd75 100644
+--- a/src/tile_cmd.h
++++ b/src/tile_cmd.h
+@@ -208,6 +208,11 @@ inline void AnimateTile(TileIndex tile)
+ 
+ inline bool ClickTile(TileIndex tile)
+ {
++	/* OpenTTD Portfolio : un clic sur une maison ouvre la fiche du projet de sa ville ;
++	 * les autres tuiles (industries, gares, dépôts...) n'ouvrent aucune fenêtre. */
++	extern bool PortfolioClickTile(TileIndex tile);
++	if (_game_mode == GM_NORMAL) return PortfolioClickTile(tile);
++
+ 	ClickTileProc *proc = _tile_type_procs[GetTileType(tile)]->click_tile_proc;
+ 	if (proc == nullptr) return false;
+ 	return proc(tile);
+diff --git a/src/viewport.cpp b/src/viewport.cpp
+index 6427a14..c0f5c60 100644
+--- a/src/viewport.cpp
++++ b/src/viewport.cpp
+@@ -2347,6 +2347,17 @@ static bool CheckClickOnViewportSign(const Viewport &vp, int x, int y)
+ 		}
+ 	});
+ 
++	/* OpenTTD Portfolio : le nom d'une ville ouvre la fiche de son projet ; les noms de
++	 * gares et les panneaux n'ouvrent rien. */
++	if (_game_mode == GM_NORMAL) {
++		extern void ShowPortfolioProject(TownID town);
++		if (last_t != nullptr) {
++			ShowPortfolioProject(last_t->index);
++			return true;
++		}
++		return last_st != nullptr || last_si != nullptr;
++	}
++
+ 	/* Select which hit to handle based on priority */
+ 	if (last_st != nullptr) {
+ 		if (Station::IsExpected(last_st)) {
+@@ -2509,6 +2520,9 @@ bool HandleViewportClicked(const Viewport &vp, int x, int y)
+ 	if (CheckClickOnViewportSign(vp, x, y)) return true;
+ 	bool result = CheckClickOnLandscape(vp, x, y);
+ 
++	/* OpenTTD Portfolio : un clic sur un véhicule n'ouvre pas sa fenêtre de gestion. */
++	if (v != nullptr && _game_mode == GM_NORMAL) return result;
++
+ 	if (v != nullptr) {
+ 		Debug(misc, 2, "Vehicle {} (index {}) at {}", v->unitnumber, v->index, fmt::ptr(v));
+ 		if (IsCompanyBuildableVehicleType(v)) {
+diff --git a/src/window_type.h b/src/window_type.h
+index 67a23bc..5a4defa 100644
+--- a/src/window_type.h
++++ b/src/window_type.h
+@@ -732,6 +732,10 @@ enum WindowClass : uint16_t {
+ 	 */
+ 	WC_HELPWIN,
+ 
++	WC_PORTFOLIO_PROJECT, ///< OpenTTD Portfolio : fiche d'un projet, une par ville.
++	WC_PORTFOLIO_WELCOME, ///< OpenTTD Portfolio : accueil et liste des projets.
++	WC_PORTFOLIO_COLLABORATORS, ///< OpenTTD Portfolio : collaborateurs.
++
+ 	WC_INVALID = 0xFFFF, ///< Invalid window.
+ };
+ 

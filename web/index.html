@@ -1,0 +1,28 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>OpenTTD Portfolio</title>
+  <link rel="icon" href="data:,">
+  <meta name="build" content="__BUILD__">
+  <link rel="stylesheet" href="portfolio.css?v=__BUILD__">
+</head>
+<body>
+  <canvas id="canvas" class="emscripten" tabindex="0" oncontextmenu="event.preventDefault()"></canvas>
+  <!-- écran de chargement : étape, barre de progression, Mo téléchargés / total -->
+  <div id="loading">
+    <div class="ld-box">
+      <div class="ld-title">Chargement de la carte des projets</div>
+      <div class="ld-step" id="ld-step">Étape 1/2 · Téléchargement du jeu</div>
+      <div class="ld-bar"><div class="ld-fill" id="ld-fill"></div></div>
+      <div class="ld-detail" id="ld-detail">Connexion au serveur…</div>
+      <div class="ld-status" id="status"></div>
+    </div>
+  </div>
+  <script src="midisynth.js?v=__BUILD__"></script>
+  <script src="portfolio.js?v=__BUILD__"></script>
+  <script src="openttd-data.js?v=__BUILD__"></script>
+  <script src="openttd.js?v=__BUILD__" async></script>
+</body>
+</html>

@@ -246,7 +246,7 @@ static const char * const PORTFOLIO_INTRO =
 	"Chaque ville de cette carte est un projet de Jules ROGUE (BTS SIO SLAM). "
 	"Cliquez sur un bâtiment pour afficher le projet de sa ville.";
 static const char * const PORTFOLIO_HELP =
-	"Se déplacer : clic droit maintenu ou flèches du clavier. Zoom : molette.";
+	"Se déplacer : faire glisser la carte ou flèches du clavier. Zoom : molette.";
 
 struct PortfolioWelcomeWindow : Window {
 	int line_height = 0;
@@ -451,6 +451,11 @@ void PortfolioAfterLoad()
 		ScrollMainWindowToTile(center != nullptr ? center->xy : TileXY(Map::SizeX() / 2, Map::SizeY() / 2), true);
 	}
 	ShowPortfolioWelcome();
+
+#ifdef __EMSCRIPTEN__
+	/* la coquille web masque l'écran de chargement */
+	EM_ASM({ if (Module.onGameReady) Module.onGameReady(); });
+#endif
 }
 
 #ifdef __EMSCRIPTEN__
