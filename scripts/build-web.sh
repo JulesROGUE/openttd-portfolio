@@ -10,12 +10,12 @@ FS="$ROOT/build/fsroot"
 
 echo "==> Carte du portfolio"
 mkdir -p "$ROOT/build/out"
-"$ROOT/scripts/gen-map.sh" "$ROOT/build/native" "$ROOT/build/out/portfolio.sav"
+"$ROOT/scripts/gen-map.sh" "$ROOT/build/native" "$ROOT/build/out/projectsland.sav"
 
 echo "==> Système de fichiers du jeu"
 rm -rf "$FS" "$OUT"
 mkdir -p "$FS/baseset/opengfx" "$FS/baseset/openmsx" "$FS/lang" "$FS/game/PortfolioGS" "$OUT/sfx"
-cp "$ROOT/build/out/portfolio.sav" "$FS/portfolio.sav"
+cp "$ROOT/build/out/projectsland.sav" "$FS/projectsland.sav"
 cp "$ROOT/config/openttd.cfg" "$FS/openttd.cfg"
 cp "$ROOT/build/wasm/lang/english.lng" "$FS/lang/"
 # fichiers d'OpenTTD (graphismes complémentaires, jeux « vides » de secours)

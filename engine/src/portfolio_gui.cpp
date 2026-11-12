@@ -34,6 +34,10 @@
 #include "base_media_sounds.h"
 #include "sound_func.h"
 #include "debug.h"
+#include "company_manager_face.h"
+#include "core/random_func.hpp"
+#include "core/geometry_func.hpp"
+#include "table/sprites.h"
 #include "landscape.h"
 #include "tile_map.h"
 #include "portfolio_gui.h"
@@ -273,7 +277,7 @@ static WindowDesc _portfolio_welcome_desc(
 );
 
 static const char * const PORTFOLIO_INTRO =
-	"Chaque ville de cette carte est un projet de Jules ROGUE (BTS SIO SLAM). "
+	"Bienvenue à ProjectsLand : chaque ville est un projet de Jules ROGUE (BTS SIO SLAM). "
 	"Cliquez sur un bâtiment pour afficher le projet de sa ville.";
 static const char * const PORTFOLIO_HELP =
 	"Se déplacer : faire glisser la carte ou flèches du clavier. Zoom : molette.";
@@ -300,7 +304,7 @@ struct PortfolioWelcomeWindow : Window {
 
 	std::string GetWidgetString(WidgetID widget, StringID stringid) const override
 	{
-		if (widget == WID_PW_CAPTION) return "Portfolio de Jules ROGUE";
+		if (widget == WID_PW_CAPTION) return "ProjectsLand";
 		return this->Window::GetWidgetString(widget, stringid);
 	}
 
@@ -366,10 +370,37 @@ void ShowPortfolioWelcome()
 }
 
 /* ------------------------------------------------------------------------- */
-/* Collaborateurs                                                            */
+/* Collaborateurs : liste, puis fiche avec un avatar façon président          */
 /* ------------------------------------------------------------------------- */
 
+/**
+ * Avatar d'un collaborateur : un visage de président de compagnie (sprites d'OpenGFX),
+ * tiré au sort de façon déterministe à partir du seul nom (hachage FNV-1a). Le style de
+ * visage découle de la graine uniquement ; il n'est ni affiché ni interprété.
+ */
+static CompanyManagerFace PortfolioFace(std::string_view name)
+{
+	uint32_t hash = 2166136261u;
+	for (char c : name) hash = (hash ^ static_cast<uint8_t>(c)) * 16777619u;
+	Randomizer randomizer;
+	randomizer.SetSeed(hash);
+	CompanyManagerFace face{};
+	RandomiseCompanyManagerFace(face, randomizer);
+	return face;
+}
+
+/** Couleur du fond de l'avatar, elle aussi tirée du nom. */
+static Colours PortfolioFaceColour(std::string_view name)
+{
+	uint32_t hash = 5381;
+	for (char c : name) hash = hash * 33 + static_cast<uint8_t>(c);
+	return static_cast<Colours>(hash % COLOUR_END);
+}
+
+void ShowPortfolioCollaborator(uint index);
+
 enum PortfolioCollaboratorsWidgets : WidgetID {
+	WID_PC_INTRO,
 	WID_PC_LIST,
 };
 
@@ -379,7 +410,10 @@ static constexpr std::initializer_list<NWidgetPart> _nested_portfolio_collaborat
 		NWidget(WWT_CAPTION, COLOUR_BROWN), SetStringTip(STR_PORTFOLIO_COLLABORATORS_CAPTION, STR_TOOLTIP_WINDOW_TITLE_DRAG_THIS),
 		NWidget(WWT_STICKYBOX, COLOUR_BROWN),
 	EndContainer(),
-	NWidget(WWT_PANEL, COLOUR_BROWN, WID_PC_LIST), SetFill(1, 0), SetToolTip(STR_PORTFOLIO_COLLABORATORS_LIST_TOOLTIP), EndContainer(),
+	NWidget(WWT_PANEL, COLOUR_BROWN, WID_PC_INTRO), SetFill(1, 0), EndContainer(),
+	NWidget(WWT_PANEL, COLOUR_BROWN),
+		NWidget(WWT_INSET, COLOUR_BROWN, WID_PC_LIST), SetPadding(2, 2, 2, 2), SetFill(1, 0), SetToolTip(STR_PORTFOLIO_COLLABORATORS_LIST_TOOLTIP), EndContainer(),
+	EndContainer(),
 };
 
 static WindowDesc _portfolio_collaborators_desc(
@@ -389,65 +423,79 @@ static WindowDesc _portfolio_collaborators_desc(
 	_nested_portfolio_collaborators_widgets
 );
 
+static const char * const PORTFOLIO_COLLABORATORS_INTRO =
+	"Les personnes citées dans l'équipe d'un projet. Cliquez sur un nom pour ouvrir sa fiche.";
+
+/** Liste des collaborateurs : un clic sur un nom ouvre sa fiche. */
 struct PortfolioCollaboratorsWindow : Window {
-	std::vector<int> entry_top; ///< position (relative) du début de chaque collaborateur
+	int line_height = 0;
 
 	PortfolioCollaboratorsWindow(WindowDesc &desc) : Window(desc)
 	{
 		this->InitNested(0);
 	}
 
-	std::vector<PortfolioParagraph> Paragraphs() const
+	std::vector<PortfolioParagraph> Intro() const
 	{
-		std::vector<PortfolioParagraph> out;
-		out.push_back({TC_BLACK, "Les personnes qui ont réalisé un projet avec Jules ROGUE, telles qu'elles sont citées dans la fiche du projet.", 0});
+		std::vector<PortfolioParagraph> out{ {TC_BLACK, PORTFOLIO_COLLABORATORS_INTRO, 0} };
 		if (_portfolio_collaborators.empty()) out.push_back({TC_GREY, "Aucun collaborateur.", 1});
-		for (const auto &c : _portfolio_collaborators) {
-			const PortfolioProject &p = _portfolio_projects[c.project];
-			out.push_back({TC_WHITE, std::string(c.name), 1});
-			out.push_back({TC_BLACK, "Projet : " + std::string(p.title) + " (" + std::string(p.type) + ")", 0});
-			out.push_back({TC_BLACK, "Équipe : " + std::string(p.team), 0});
+		return out;
+	}
+
+	static std::string ProjectsOf(const PortfolioCollaborator &c)
+	{
+		std::string out;
+		for (size_t i : c.projects) {
+			if (!out.empty()) out += ", ";
+			out += _portfolio_projects[i].title;
 		}
 		return out;
 	}
 
 	void UpdateWidgetSize(WidgetID widget, Dimension &size, [[maybe_unused]] const Dimension &padding, [[maybe_unused]] Dimension &fill, [[maybe_unused]] Dimension &resize) override
 	{
-		if (widget != WID_PC_LIST) return;
-		int width = ScaleGUITrad(320);
-		Rect r{0, 0, width - 1, 0};
-		size.width = std::max<uint>(size.width, width + WidgetDimensions::scaled.frametext.Horizontal());
-		size.height = DrawParagraphs(r, this->Paragraphs(), false) + WidgetDimensions::scaled.frametext.Vertical() + WidgetDimensions::scaled.framerect.Vertical();
+		int width = ScaleGUITrad(300);
+		switch (widget) {
+			case WID_PC_INTRO: {
+				Rect r{0, 0, width - 1, 0};
+				size.width = std::max<uint>(size.width, width + WidgetDimensions::scaled.frametext.Horizontal());
+				size.height = DrawParagraphs(r, this->Intro(), false) + WidgetDimensions::scaled.frametext.Vertical() + WidgetDimensions::scaled.framerect.Vertical();
+				break;
+			}
+			case WID_PC_LIST:
+				this->line_height = GetCharacterHeight(FS_NORMAL) + WidgetDimensions::scaled.matrix.Vertical();
+				size.height = this->line_height * static_cast<uint>(std::max<size_t>(1, _portfolio_collaborators.size())) + WidgetDimensions::scaled.framerect.Vertical();
+				break;
+		}
 	}
 
 	void DrawWidget(const Rect &r, WidgetID widget) const override
 	{
-		if (widget != WID_PC_LIST) return;
-		DrawParagraphs(r.Shrink(WidgetDimensions::scaled.frametext, WidgetDimensions::scaled.framerect), this->Paragraphs(), true);
+		switch (widget) {
+			case WID_PC_INTRO:
+				DrawParagraphs(r.Shrink(WidgetDimensions::scaled.frametext, WidgetDimensions::scaled.framerect), this->Intro(), true);
+				break;
+
+			case WID_PC_LIST: {
+				Rect tr = r.Shrink(WidgetDimensions::scaled.framerect);
+				int y = tr.top + WidgetDimensions::scaled.matrix.top;
+				for (const auto &c : _portfolio_collaborators) {
+					DrawString(tr.left + WidgetDimensions::scaled.hsep_normal, tr.right, y, std::string(c.name), TC_ORANGE);
+					DrawString(tr.left, tr.right - WidgetDimensions::scaled.hsep_normal, y, ProjectsOf(c), TC_GREY, SA_RIGHT);
+					y += this->line_height;
+				}
+				break;
+			}
+		}
 	}
 
-	/** Un clic sur un collaborateur ouvre la fiche de son projet. */
 	void OnClick(Point pt, WidgetID widget, [[maybe_unused]] int click_count) override
 	{
-		if (widget != WID_PC_LIST || _portfolio_collaborators.empty()) return;
-		/* chaque collaborateur occupe trois paragraphes après l'introduction */
+		if (widget != WID_PC_LIST) return;
 		const NWidgetBase *nwid = this->GetWidget<NWidgetBase>(WID_PC_LIST);
-		Rect r{0, 0, static_cast<int>(nwid->current_x) - 1 - static_cast<int>(WidgetDimensions::scaled.frametext.Horizontal()), 0};
-		auto paragraphs = this->Paragraphs();
-		int y = nwid->pos_y + WidgetDimensions::scaled.frametext.top + WidgetDimensions::scaled.framerect.top;
-		y += DrawParagraphs(r, {paragraphs[0]}, false);
-		for (size_t i = 0; i < _portfolio_collaborators.size(); i++) {
-			int h = DrawParagraphs(r, {paragraphs[1 + i * 3], paragraphs[2 + i * 3], paragraphs[3 + i * 3]}, false);
-			if (pt.y >= y && pt.y < y + h) {
-				Town *t = TownOfProject(_portfolio_collaborators[i].project);
-				if (t != nullptr) {
-					ScrollMainWindowToTile(t->xy);
-					ShowPortfolioProject(t->index);
-				}
-				return;
-			}
-			y += h;
-		}
+		int row = (pt.y - nwid->pos_y - WidgetDimensions::scaled.framerect.top) / std::max(1, this->line_height);
+		if (row < 0 || row >= static_cast<int>(_portfolio_collaborators.size())) return;
+		ShowPortfolioCollaborator(row);
 	}
 };
 
@@ -455,6 +503,126 @@ void ShowPortfolioCollaborators()
 {
 	if (BringWindowToFrontById(WC_PORTFOLIO_COLLABORATORS, 0)) return;
 	new PortfolioCollaboratorsWindow(_portfolio_collaborators_desc);
+}
+
+/* Fiche d'un collaborateur : avatar dans un cadre (comme la fenêtre de compagnie),
+ * nom, équipe et projets tels qu'ils figurent dans les données. */
+
+enum PortfolioCollaboratorWidgets : WidgetID {
+	WID_PCF_CAPTION,
+	WID_PCF_FACE,
+	WID_PCF_NAME,
+	WID_PCF_TEXT,
+	WID_PCF_PROJECT,
+};
+
+static constexpr std::initializer_list<NWidgetPart> _nested_portfolio_collaborator_widgets = {
+	NWidget(NWID_HORIZONTAL),
+		NWidget(WWT_CLOSEBOX, COLOUR_BROWN),
+		NWidget(WWT_CAPTION, COLOUR_BROWN, WID_PCF_CAPTION),
+		NWidget(WWT_STICKYBOX, COLOUR_BROWN),
+	EndContainer(),
+	NWidget(WWT_PANEL, COLOUR_BROWN),
+		NWidget(NWID_HORIZONTAL), SetPIP(0, WidgetDimensions::unscaled.hsep_wide, 0), SetPadding(4),
+			NWidget(NWID_VERTICAL), SetPIP(0, WidgetDimensions::unscaled.vsep_normal, 0),
+				NWidget(WWT_INSET, COLOUR_BROWN),
+					NWidget(WWT_EMPTY, INVALID_COLOUR, WID_PCF_FACE), SetMinimalSize(92, 119), SetFill(1, 0),
+				EndContainer(),
+				NWidget(WWT_EMPTY, INVALID_COLOUR, WID_PCF_NAME), SetFill(1, 1), SetMinimalTextLines(2, 0),
+			EndContainer(),
+			NWidget(WWT_EMPTY, INVALID_COLOUR, WID_PCF_TEXT), SetFill(1, 1),
+		EndContainer(),
+	EndContainer(),
+	NWidget(WWT_PUSHTXTBTN, COLOUR_BROWN, WID_PCF_PROJECT), SetFill(1, 1), SetStringTip(STR_PORTFOLIO_OPEN_PROJECT, STR_PORTFOLIO_OPEN_PROJECT_TOOLTIP),
+};
+
+static WindowDesc _portfolio_collaborator_desc(
+	WDP_AUTO, "portfolio_collaborator", 0, 0,
+	WC_PORTFOLIO_COLLABORATOR, WC_NONE,
+	{},
+	_nested_portfolio_collaborator_widgets
+);
+
+struct PortfolioCollaboratorWindow : Window {
+	const PortfolioCollaborator *collaborator = nullptr;
+	CompanyManagerFace face{};
+	Colours colour = COLOUR_BLUE;
+
+	PortfolioCollaboratorWindow(WindowDesc &desc, WindowNumber number) : Window(desc)
+	{
+		this->collaborator = &_portfolio_collaborators[number];
+		this->face = PortfolioFace(this->collaborator->name);
+		this->colour = PortfolioFaceColour(this->collaborator->name);
+		this->InitNested(number);
+	}
+
+	std::vector<PortfolioParagraph> Paragraphs() const
+	{
+		std::vector<PortfolioParagraph> out;
+		for (size_t i : this->collaborator->projects) {
+			const PortfolioProject &p = _portfolio_projects[i];
+			out.push_back({TC_ORANGE, "Projet", out.empty() ? 0 : 1});
+			out.push_back({TC_WHITE, std::string(p.title), 0});
+			out.push_back({TC_BLACK, std::string(p.subtitle) + " (" + std::string(p.type) + ")", 0});
+			out.push_back({TC_ORANGE, "Rôle dans l'équipe", 1});
+			out.push_back({TC_BLACK, std::string(p.team), 0});
+		}
+		return out;
+	}
+
+	std::string GetWidgetString(WidgetID widget, StringID stringid) const override
+	{
+		if (widget == WID_PCF_CAPTION) return std::string(this->collaborator->name);
+		return this->Window::GetWidgetString(widget, stringid);
+	}
+
+	void UpdateWidgetSize(WidgetID widget, Dimension &size, [[maybe_unused]] const Dimension &padding, [[maybe_unused]] Dimension &fill, [[maybe_unused]] Dimension &resize) override
+	{
+		switch (widget) {
+			case WID_PCF_FACE:
+				size = maxdim(size, GetScaledSpriteSize(SPR_GRADIENT));
+				break;
+			case WID_PCF_NAME:
+				size.width = std::max(size.width, GetStringBoundingBox(std::string(this->collaborator->name)).width);
+				break;
+			case WID_PCF_TEXT: {
+				int width = ScaleGUITrad(240);
+				size.width = std::max<uint>(size.width, width);
+				size.height = std::max<uint>(size.height, DrawParagraphs({0, 0, width - 1, 0}, this->Paragraphs(), false));
+				break;
+			}
+		}
+	}
+
+	void DrawWidget(const Rect &r, WidgetID widget) const override
+	{
+		switch (widget) {
+			case WID_PCF_FACE:
+				DrawCompanyManagerFace(this->face, this->colour, r);
+				break;
+			case WID_PCF_NAME:
+				DrawStringMultiLine(r, std::string(this->collaborator->name), TC_WHITE, SA_HOR_CENTER | SA_TOP);
+				break;
+			case WID_PCF_TEXT:
+				DrawParagraphs(r, this->Paragraphs(), true);
+				break;
+		}
+	}
+
+	void OnClick([[maybe_unused]] Point pt, WidgetID widget, [[maybe_unused]] int click_count) override
+	{
+		if (widget != WID_PCF_PROJECT || this->collaborator->projects.empty()) return;
+		Town *t = TownOfProject(this->collaborator->projects.front());
+		if (t == nullptr) return;
+		ScrollMainWindowToTile(t->xy);
+		ShowPortfolioProject(t->index);
+	}
+};
+
+void ShowPortfolioCollaborator(uint index)
+{
+	if (index >= _portfolio_collaborators.size()) return;
+	AllocateWindowDescFront<PortfolioCollaboratorWindow>(_portfolio_collaborator_desc, index);
 }
 
 /* ------------------------------------------------------------------------- */

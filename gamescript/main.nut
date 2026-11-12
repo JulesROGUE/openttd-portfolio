@@ -351,7 +351,7 @@ function PortfolioGS::BuildBusLines(towns)
 	/* un capital confortable (affiché dans la barre d'état), sans emprunt */
 	GSCompany.ChangeBankBalance(company, 2000000, GSCompany.EXPENSES_OTHER, GSMap.TILE_INVALID);
 	local mode = GSCompanyMode(company);
-	GSCompany.SetName("Portfolio Transport");
+	GSCompany.SetName("ProjectsLand Transport");
 	GSCompany.SetLoanAmount(0);
 	GSRoad.SetCurrentRoadType(GSRoad.ROADTYPE_ROAD);
 

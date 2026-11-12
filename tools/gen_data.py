@@ -91,15 +91,15 @@ def main():
         '\tstd::string_view note;',
         '};',
         '',
-        '/** Un collaborateur, tel que cité dans le champ « team » d\'un projet. */',
+        '/** Un collaborateur, tel que cité dans le champ « team » des projets (un seul par nom). */',
         'struct PortfolioCollaborator {',
         '\tstd::string_view name;',
-        '\tsize_t project;              ///< indice dans _portfolio_projects',
+        '\tstd::vector<size_t> projects; ///< indices dans _portfolio_projects',
         '};',
         '',
         'static const std::vector<PortfolioProject> _portfolio_projects = {',
     ]
-    collabs = []
+    collabs = {}
     for i, p in enumerate(projects):
         if len(clean(p['title'])) > 32:
             raise SystemExit(f"titre trop long pour un nom de ville : {p['title']}")
@@ -118,12 +118,12 @@ def main():
         lines.append(f"\t\t{cstr(p.get('note', ''))},")
         lines.append('\t},')
         for name in collaborators(p):
-            collabs.append((name, i))
+            collabs.setdefault(name, []).append(i)
     lines.append('};')
     lines.append('')
     lines.append('static const std::vector<PortfolioCollaborator> _portfolio_collaborators = {')
-    for name, i in collabs:
-        lines.append(f'\t{{ {cstr(name)}, {i} }},')
+    for name, idx in collabs.items():
+        lines.append(f'\t{{ {cstr(name)}, {{ {", ".join(str(i) for i in idx)} }} }},')
     lines.append('};')
     lines.append('')
     center = next((i for i, p in enumerate(projects) if p['id'] == CENTER_ID), 0)
@@ -144,7 +144,7 @@ def main():
     with open(f'{gs_dir}/projects.nut', 'w', encoding='utf-8') as f:
         f.write('\n'.join(nut) + '\n')
 
-    print(f'{len(projects)} projets, {len(collabs)} collaborateur(s) : {", ".join(n for n, _ in collabs) or "aucun"}')
+    print(f'{len(projects)} projets, {len(collabs)} collaborateur(s) : {", ".join(collabs) or "aucun"}')
 
 
 if __name__ == '__main__':

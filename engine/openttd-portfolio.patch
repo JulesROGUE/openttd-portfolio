@@ -78,10 +78,10 @@ index 68a2445..ac34de3 100644
  		if (list->global_hotkey_handler == nullptr) continue;
  
 diff --git a/src/lang/english.txt b/src/lang/english.txt
-index 0b32a4a..5022f41 100644
+index 0b32a4a..c7154f7 100644
 --- a/src/lang/english.txt
 +++ b/src/lang/english.txt
-@@ -5976,3 +5976,14 @@ STR_BADGE_CONFIG_PREVIEW                                        :Preview Image
+@@ -5976,3 +5976,16 @@ STR_BADGE_CONFIG_PREVIEW                                        :Preview Image
  STR_BADGE_CONFIG_NAME                                           :Name
  STR_BADGE_FILTER_ANY_LABEL                                      :Any {STRING}
  STR_BADGE_FILTER_IS_LABEL                                       :{STRING} is {STRING}
@@ -94,7 +94,9 @@ index 0b32a4a..5022f41 100644
 +STR_PORTFOLIO_COLLABORATORS                                     :Collaborators
 +STR_PORTFOLIO_COLLABORATORS_TOOLTIP                             :{BLACK}People who worked on the projects with Jules
 +STR_PORTFOLIO_COLLABORATORS_CAPTION                             :{WHITE}Collaborators
-+STR_PORTFOLIO_COLLABORATORS_LIST_TOOLTIP                        :{BLACK}Click a collaborator to open the project
++STR_PORTFOLIO_COLLABORATORS_LIST_TOOLTIP                        :{BLACK}Click a name to open the collaborator's card
++STR_PORTFOLIO_OPEN_PROJECT                                      :Open project
++STR_PORTFOLIO_OPEN_PROJECT_TOOLTIP                              :{BLACK}Show the project's town and card
 +STR_PORTFOLIO_PROJECT_LIST_TOOLTIP                              :{BLACK}Click a project to go to its town
 diff --git a/src/main_gui.cpp b/src/main_gui.cpp
 index f54c7d6..4872efb 100644
@@ -254,16 +256,17 @@ index 6427a14..c0f5c60 100644
  		Debug(misc, 2, "Vehicle {} (index {}) at {}", v->unitnumber, v->index, fmt::ptr(v));
  		if (IsCompanyBuildableVehicleType(v)) {
 diff --git a/src/window_type.h b/src/window_type.h
-index 67a23bc..5a4defa 100644
+index 67a23bc..8296e2f 100644
 --- a/src/window_type.h
 +++ b/src/window_type.h
-@@ -732,6 +732,10 @@ enum WindowClass : uint16_t {
+@@ -732,6 +732,11 @@ enum WindowClass : uint16_t {
  	 */
  	WC_HELPWIN,
  
 +	WC_PORTFOLIO_PROJECT, ///< OpenTTD Portfolio : fiche d'un projet, une par ville.
 +	WC_PORTFOLIO_WELCOME, ///< OpenTTD Portfolio : accueil et liste des projets.
 +	WC_PORTFOLIO_COLLABORATORS, ///< OpenTTD Portfolio : collaborateurs.
++	WC_PORTFOLIO_COLLABORATOR, ///< OpenTTD Portfolio : fiche d'un collaborateur.
 +
  	WC_INVALID = 0xFFFF, ///< Invalid window.
  };

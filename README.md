@@ -1,8 +1,9 @@
-# OpenTTD Portfolio — les projets de Jules ROGUE dans OpenTTD
+# OpenTTD Portfolio — ProjectsLand, les projets de Jules ROGUE dans OpenTTD
 
 Une version **minimale et modifiée d'[OpenTTD](https://www.openttd.org) 15.3**, compilée en
 **WebAssembly** (Emscripten), qui sert d'application « Projets » au portfolio
-[julesrogue.fr](https://julesrogue.fr) : **chaque ville de la carte est un projet**.
+[julesrogue.fr](https://julesrogue.fr). Le monde s'appelle **ProjectsLand** :
+**chaque ville est un projet**.
 
 > Projet réalisé dans le cadre du BTS SIO option SLAM.
 
@@ -18,9 +19,15 @@ Une version **minimale et modifiée d'[OpenTTD](https://www.openttd.org) 15.3**,
 - **Un clic sur un bâtiment** (ou sur le nom d'une ville) ouvre la **fiche du projet** :
   sous-titre, type, résumé, points forts, technologies, équipe, lien. Boutons :
   *Show on map*, *Open link* (nouvel onglet), *Collaborators*.
-- **Collaborateurs** : bouton *Collaborators* (fiche d'un projet ou fenêtre d'accueil).
-  La liste est tirée uniquement du champ `team` des données (« … réalisé avec X ») : nom
-  et projet, rien d'autre. Un clic sur un collaborateur ouvre la fiche du projet.
+- **Collaborateurs** : bouton *Collaborators* (fiche d'un projet ou fenêtre d'accueil),
+  puis un clic sur un nom ouvre la **fiche du collaborateur**, comme la fenêtre d'une
+  compagnie : son **avatar** est un visage de président dessiné par le moteur
+  (`DrawCompanyManagerFace`, sprites d'OpenGFX), dans un cadre, avec son nom, ses projets
+  et le texte d'équipe, et un bouton *Open project*. La liste est tirée uniquement du
+  champ `team` des données (« … réalisé avec X ») : rien d'autre n'est affiché. Le visage
+  et sa couleur de fond sont tirés au sort à partir du seul nom (hachage FNV-1a comme
+  graine) : toujours le même, sans aucune signification (le style de visage vient
+  uniquement de la graine et n'est ni affiché ni interprété).
 - **Fenêtre d'accueil** : quelques mots d'explication et la liste des projets (un clic
   amène sur la ville). Déplacement : faire glisser la carte (ou flèches), zoom : molette.
 - Tout ce qui permet de construire ou de gérer est désactivé : raccourcis clavier,
@@ -86,7 +93,7 @@ scripts/fetch-sources.sh   OpenTTD 15.3 + OpenGFX / OpenSFX / OpenMSX (SHA-256 v
 scripts/prepare-src.sh     archive + engine/openttd-portfolio.patch + engine/src, engine/os
 scripts/build-engine.sh    OpenTTD natif (outils, génération de la carte) puis WebAssembly
 scripts/gen-map.sh         partie générée par la version native, sans affichage :
-                           graine fixe (config/pregen.cfg) + script de jeu PortfolioGS
+                           graine fixe (-G 20260) + config/pregen.cfg + script de jeu PortfolioGS
 scripts/build-web.sh       carte + paquet de données + coquille web -> dist/openttd
 ```
 
@@ -101,9 +108,12 @@ scripts/build-web.sh       carte + paquet de données + coquille web -> dist/ope
   une maison et sur un nom de ville → fiche du projet, aucun clic sur véhicules, gares,
   barre d'état ; fenêtres du portfolio (`portfolio_gui.cpp`) ; pilote de musique ;
   `pre.js` (arguments : carte, réglages `config/openttd.cfg`, son SDL, musique).
-- **Coquille web** (`web/`) : écran de chargement (étape, barre de progression, Mo
-  téléchargés / total), ressources versionnées `?v=<build>` (empreinte injectée par
-  `build-web.sh`), réveil de l'audio.
+- **Coquille web** (`web/`) : écran de chargement minimal (fond noir, en bas au
+  centre : « Chargement.. » puis « Moteur du jeu 1/3 », « Données du jeu 2/3 »,
+  « Préparation de la carte 3/3 », même gabarit que Cube 2), ressources versionnées
+  `?v=<build>` (empreinte injectée par `build-web.sh`), réveil de l'audio. Le curseur du
+  navigateur est masqué au-dessus du jeu (OpenTTD dessine le sien) mais reste visible
+  pendant le chargement et au-dessus du panneau des illustrations.
 - **Serveur** (`server/server.js`) : fichiers statiques sous `/openttd/`, gzip
   pré-calculé, `Cache-Control` long et immuable pour les ressources versionnées, `no-cache`
   pour le reste (Cloudflare est devant le site).

@@ -21,7 +21,7 @@ cp "$ROOT/config/pregen.cfg" "$WORK/openttd.cfg"
 
 export OPENTTD_PORTFOLIO_PREGEN=1
 cd "$NATIVE"
-./openttd -vnull:ticks="$TICKS" -snull -mnull -c "$WORK/openttd.cfg" -g -d script=4 2>&1 | tee "$WORK/log.txt" "${LOG:-/dev/null}" | grep -E "dbg: \[script\]|rror" || true
+./openttd -vnull:ticks="$TICKS" -snull -mnull -c "$WORK/openttd.cfg" -g -G "${SEED:-20260}" -d script=4 2>&1 | tee "$WORK/log.txt" "${LOG:-/dev/null}" | grep -E "dbg: \[script\]|rror" || true
 grep -q PORTFOLIO_MAP_DONE "$WORK/log.txt" || { echo "ERREUR : le script de jeu n'a pas terminé la carte" >&2; exit 1; }
 SAVE="$(find "$WORK" -name exit.sav | head -1)"
 [ -n "$SAVE" ] || { echo "ERREUR : sauvegarde introuvable" >&2; exit 1; }

@@ -1,11 +1,11 @@
 /*
  * OpenTTD Portfolio : remplace os/emscripten/pre.js d'OpenTTD.
- * Lance directement la carte du portfolio (sauvegarde /portfolio.sav), avec les
+ * Lance directement ProjectsLand, la carte du portfolio (sauvegarde /projectsland.sav), avec les
  * réglages /openttd.cfg, le son SDL (bruitages) et le pilote de musique Web Audio.
  * Pas de stockage persistant (IDBFS) ni de réseau : chaque visite repart de la carte.
  */
 Module.arguments = Module.arguments || [];
-Module.arguments.push('-vsdl', '-ssdl:samples=2048', '-memscripten', '-c', '/openttd.cfg', '-g', '/portfolio.sav');
+Module.arguments.push('-vsdl', '-ssdl:samples=2048', '-memscripten', '-c', '/openttd.cfg', '-g', '/projectsland.sav');
 Module.preRun = Module.preRun || [];
 
 Module.preRun.push(function () {
