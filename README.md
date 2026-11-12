@@ -108,6 +108,21 @@ scripts/build-web.sh       carte + paquet de données + coquille web -> dist/ope
   pré-calculé, `Cache-Control` long et immuable pour les ressources versionnées, `no-cache`
   pour le reste (Cloudflare est devant le site).
 
+## Taille du téléchargement
+
+| Fichier | Taille | Transféré (gzip) |
+|---|---|---|
+| `openttd.wasm` (moteur) | 10,3 Mo | 3,2 Mo |
+| `openttd.data` (OpenGFX tempéré, langue, carte, musiques MIDI) | 6,0 Mo | 3,4 Mo |
+| `openttd.js`, coquille web | 0,3 Mo | 0,07 Mo |
+| **Chargement de la carte** | **16,6 Mo** | **≈ 6,7 Mo** |
+| `sfx/opensfx.cat` (au premier clic seulement) | 13,2 Mo | 11,5 Mo |
+
+Pour alléger le paquet, seuls les fichiers d'OpenGFX du climat tempéré sont embarqués
+(`ogfx1_base`, `ogfxe_extra`, `ogfxi_logos`) : OpenTTD signale dans la console du
+navigateur que le jeu est « incomplet » (fichiers arctique, tropical et jouets absents),
+sans effet sur cette carte.
+
 ## Construire et lancer
 
 ```bash
@@ -133,3 +148,11 @@ de base gardent leurs licences (tableau ci-dessus). Ce portfolio n'est ni affili
 approuvé par l'équipe OpenTTD.
 
 © 2026 Jules ROGUE pour les modifications et les fichiers ajoutés.
+
+## Tests
+
+`tests/villes.js` (un clic sur une maison de chaque ville ouvre sa fiche) et
+`tests/audio.js` (audio suspendu avant le premier clic, puis bruitages et musique) se
+lancent avec Node et `playwright-core` contre un serveur local ou en ligne :
+`node tests/villes.js http://127.0.0.1:8084/openttd/ <dossier des captures>`.
+Ils utilisent les points d'entrée `pf_test_house_point` et `pf_test_project_windows`.
