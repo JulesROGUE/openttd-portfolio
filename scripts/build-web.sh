@@ -32,7 +32,7 @@ PACKAGER="$(dirname "$(command -v emcc)")/tools/file_packager.py"
 python3 "$PACKAGER" "$OUT/openttd.data" --preload "$FS@/" --js-output="$OUT/openttd-data.js" --no-node
 
 echo "==> Bruitages OpenSFX (téléchargés au premier clic)"
-cp "$CACHE"/opensfx-1.0.3/{opensfx.obs,opensfx.cat} "$OUT/sfx/"
+cp "$CACHE"/opensfx-1.0.3/{opensfx.obs,opensfx.cat,license.txt} "$OUT/sfx/"
 
 echo "==> Moteur et coquille web"
 cp "$ROOT/build/wasm/openttd.js" "$ROOT/build/wasm/openttd.wasm" "$OUT/"

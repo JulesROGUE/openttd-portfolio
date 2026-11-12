@@ -34,6 +34,8 @@
 #include "base_media_sounds.h"
 #include "sound_func.h"
 #include "debug.h"
+#include "landscape.h"
+#include "tile_map.h"
 #include "portfolio_gui.h"
 #include "portfolio_data.h"
 #include "table/strings.h"
@@ -254,6 +256,8 @@ struct PortfolioWelcomeWindow : Window {
 	PortfolioWelcomeWindow(WindowDesc &desc) : Window(desc)
 	{
 		this->InitNested(0);
+		/* épinglée : la liste des projets reste ouverte quand on ferme les autres fenêtres */
+		this->flags.Set(WindowFlag::Sticky);
 	}
 
 	Point OnInitialPosition([[maybe_unused]] int16_t sm_width, [[maybe_unused]] int16_t sm_height, [[maybe_unused]] int window_number) override
@@ -476,5 +480,39 @@ extern "C" EMSCRIPTEN_KEEPALIVE int pf_load_sounds()
 	}
 	Debug(misc, 0, "Bruitages : OpenSFX introuvable");
 	return 0;
+}
+/**
+ * Outils de test (scripts Playwright du dépôt) : position à l'écran d'une maison de la
+ * ville d'un projet, et nombre de fiches de projet ouvertes.
+ * @return (x << 16) | y en pixels du canvas, ou -1
+ */
+extern "C" EMSCRIPTEN_KEEPALIVE int pf_test_house_point(int project)
+{
+	Town *t = TownOfProject(project);
+	Window *w = GetMainWindow();
+	if (t == nullptr || w == nullptr || w->viewport == nullptr) return -1;
+	const Viewport &vp = *w->viewport;
+	TileIndex best = INVALID_TILE;
+	uint bestd = UINT_MAX;
+	for (TileIndex tile : Map::Iterate()) {
+		if (!IsTileType(tile, MP_HOUSE) || GetTownIndex(tile) != t->index) continue;
+		uint d = DistanceManhattan(tile, t->xy);
+		if (d < bestd) { bestd = d; best = tile; }
+	}
+	if (best == INVALID_TILE) return -1;
+	Point pt = RemapCoords(TileX(best) * TILE_SIZE + TILE_SIZE / 2, TileY(best) * TILE_SIZE + TILE_SIZE / 2, GetTileMaxZ(best) * TILE_HEIGHT);
+	int x = UnScaleByZoom(pt.x - vp.virtual_left, vp.zoom) + vp.left;
+	int y = UnScaleByZoom(pt.y - vp.virtual_top, vp.zoom) + vp.top;
+	if (x < 0 || y < 0 || x >= _screen.width || y >= _screen.height) return -1;
+	return (x << 16) | y;
+}
+
+extern "C" EMSCRIPTEN_KEEPALIVE int pf_test_project_windows()
+{
+	int n = 0;
+	for (const Window *w : Window::Iterate()) {
+		if (w->window_class == WC_PORTFOLIO_PROJECT) n++;
+	}
+	return n;
 }
 #endif

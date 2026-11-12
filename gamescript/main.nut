@@ -348,8 +348,11 @@ function PortfolioGS::BuildBusLines(towns)
 		if (company == GSCompany.COMPANY_INVALID) GSController.Sleep(1);
 	}
 	if (company == GSCompany.COMPANY_INVALID) { GSLog.Warning("aucune compagnie : pas de bus"); return; }
+	/* un capital confortable (affiché dans la barre d'état), sans emprunt */
+	GSCompany.ChangeBankBalance(company, 2000000, GSCompany.EXPENSES_OTHER, GSMap.TILE_INVALID);
 	local mode = GSCompanyMode(company);
 	GSCompany.SetName("Portfolio Transport");
+	GSCompany.SetLoanAmount(0);
 	GSRoad.SetCurrentRoadType(GSRoad.ROADTYPE_ROAD);
 
 	local stops = [];

@@ -1,5 +1,5 @@
 diff --git a/CMakeLists.txt b/CMakeLists.txt
-index 2891bee..269ed2f 100644
+index 2891bee..6677e39 100644
 --- a/CMakeLists.txt
 +++ b/CMakeLists.txt
 @@ -366,36 +366,13 @@ if(EMSCRIPTEN)
@@ -38,7 +38,7 @@ index 2891bee..269ed2f 100644
 -    target_link_libraries(WASM::WASM INTERFACE "--preload-file ${CMAKE_SOURCE_DIR}/docs/symbol_server.md@/docs/symbol_server.md")
 +    # OpenTTD Portfolio : pf_load_sounds (bruitages chargés après la carte), FS et ccall
 +    # pour la coquille web.
-+    target_link_libraries(WASM::WASM INTERFACE "-s EXPORTED_FUNCTIONS='[\"_main\", \"_em_openttd_add_server\", \"_pf_load_sounds\"]' -s EXPORTED_RUNTIME_METHODS='[\"cwrap\", \"ccall\", \"FS\"]'")
++    target_link_libraries(WASM::WASM INTERFACE "-s EXPORTED_FUNCTIONS='[\"_main\", \"_em_openttd_add_server\", \"_pf_load_sounds\", \"_pf_test_house_point\", \"_pf_test_project_windows\"]' -s EXPORTED_RUNTIME_METHODS='[\"cwrap\", \"ccall\", \"FS\"]'")
 +
 +    # OpenTTD Portfolio : les données (jeux de base, langue, carte, réglages) sont
 +    # empaquetées à part par scripts/build-web.sh (file_packager), comme pour Cube 2.
