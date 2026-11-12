@@ -378,14 +378,41 @@ void ShowPortfolioWelcome()
  * tiré au sort de façon déterministe à partir du seul nom (hachage FNV-1a). Le style de
  * visage découle de la graine uniquement ; il n'est ni affiché ni interprété.
  */
-static CompanyManagerFace PortfolioFace(std::string_view name)
+static CompanyManagerFace PortfolioFace(const PortfolioCollaborator &c)
 {
 	uint32_t hash = 2166136261u;
-	for (char c : name) hash = (hash ^ static_cast<uint8_t>(c)) * 16777619u;
+	for (char ch : c.name) hash = (hash ^ static_cast<uint8_t>(ch)) * 16777619u;
 	Randomizer randomizer;
 	randomizer.SetSeed(hash);
 	CompanyManagerFace face{};
-	RandomiseCompanyManagerFace(face, randomizer);
+
+	/* Style imposé par data/collaborators.json, sinon tiré de la graine. */
+	std::optional<uint> style = c.face_style.empty() ? std::nullopt : FindCompanyManagerFaceLabel(c.face_style);
+	if (style.has_value()) {
+		SetCompanyManagerFaceStyle(face, *style);
+		RandomiseCompanyManagerFaceBits(face, GetCompanyManagerFaceVars(face.style), randomizer);
+	} else {
+		RandomiseCompanyManagerFace(face, randomizer);
+	}
+
+	/* Pièces imposées (cheveux, lunettes, veste...) : tout le reste vient du nom. */
+	FaceVars vars = GetCompanyManagerFaceVars(face.style);
+	for (const PortfolioFacePart &part : c.face_parts) {
+		for (const FaceVar &var : vars) {
+			if (var.name != part.part) continue;
+			if (var.type == FaceVarType::Toggle) {
+				var.SetBits(face, part.value != 0 ? 1 : 0);
+			} else if (part.part == STR_FACE_GLASSES) {
+				var.SetBits(face, 0); // lunettes : verres clairs (la variante 1 est solaire)
+			} else if (part.value >= 0 && static_cast<uint>(part.value) < var.valid_values) {
+				var.SetBits(face, part.value);
+			}
+		}
+	}
+#ifdef __EMSCRIPTEN__
+	extern void PortfolioTestFaceOverride(CompanyManagerFace &face);
+	PortfolioTestFaceOverride(face);
+#endif
 	return face;
 }
 
@@ -551,7 +578,7 @@ struct PortfolioCollaboratorWindow : Window {
 	PortfolioCollaboratorWindow(WindowDesc &desc, WindowNumber number) : Window(desc)
 	{
 		this->collaborator = &_portfolio_collaborators[number];
-		this->face = PortfolioFace(this->collaborator->name);
+		this->face = PortfolioFace(*this->collaborator);
 		this->colour = PortfolioFaceColour(this->collaborator->name);
 		this->InitNested(number);
 	}
@@ -710,5 +737,26 @@ extern "C" EMSCRIPTEN_KEEPALIVE int pf_test_project_windows()
 		if (w->window_class == WC_PORTFOLIO_PROJECT) n++;
 	}
 	return n;
+}
+
+/* Aperçu des variantes de visages (tests) : impose une pièce à tous les avatars. */
+static int _pf_test_face_part = -1, _pf_test_face_value = 0;
+
+void PortfolioTestFaceOverride(CompanyManagerFace &face)
+{
+	if (_pf_test_face_part < 0) return;
+	static const StringID parts[] = { STR_FACE_HAIR, STR_FACE_JACKET, STR_FACE_COLLAR, STR_FACE_CHIN, STR_FACE_TIE };
+	if (_pf_test_face_part >= static_cast<int>(std::size(parts))) return;
+	for (const FaceVar &var : GetCompanyManagerFaceVars(face.style)) {
+		if (var.name == parts[_pf_test_face_part] && var.type == FaceVarType::Sprite) var.SetBits(face, _pf_test_face_value % var.valid_values);
+	}
+}
+
+extern "C" EMSCRIPTEN_KEEPALIVE void pf_test_face(int part, int value, int collaborator)
+{
+	_pf_test_face_part = part;
+	_pf_test_face_value = value;
+	CloseWindowById(WC_PORTFOLIO_COLLABORATOR, collaborator);
+	ShowPortfolioCollaborator(collaborator);
 }
 #endif

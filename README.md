@@ -25,9 +25,8 @@ Une version **minimale et modifiée d'[OpenTTD](https://www.openttd.org) 15.3**,
   (`DrawCompanyManagerFace`, sprites d'OpenGFX), dans un cadre, avec son nom, ses projets
   et le texte d'équipe, et un bouton *Open project*. La liste est tirée uniquement du
   champ `team` des données (« … réalisé avec X ») : rien d'autre n'est affiché. Le visage
-  et sa couleur de fond sont tirés au sort à partir du seul nom (hachage FNV-1a comme
-  graine) : toujours le même, sans aucune signification (le style de visage vient
-  uniquement de la graine et n'est ni affiché ni interprété).
+  et sa couleur de fond sont tirés au sort à partir du nom (hachage FNV-1a comme
+  graine), sauf les pièces imposées par `data/collaborators.json` (voir plus bas).
 - **Fenêtre d'accueil** : quelques mots d'explication et la liste des projets (un clic
   amène sur la ville). Déplacement : faire glisser la carte (ou flèches), zoom : molette.
 - Tout ce qui permet de construire ou de gérer est désactivé : raccourcis clavier,
@@ -35,6 +34,30 @@ Une version **minimale et modifiée d'[OpenTTD](https://www.openttd.org) 15.3**,
 
 Les libellés des boutons sont en anglais, comme le reste de l'interface d'OpenTTD ; les
 textes des projets sont en français.
+
+## Avatars des collaborateurs (`data/collaborators.json`)
+
+L'avatar d'un collaborateur est un visage de président d'OpenTTD. Par défaut, tout est
+tiré au sort à partir de la graine du nom. Le fichier `data/collaborators.json` peut
+imposer certaines pièces (le reste reste tiré du nom, donc toujours le même visage) :
+
+```json
+{ "Roman Corobca": { "face": { "gender": "male", "hair": "red", "glasses": true, "build": "large" } } }
+```
+
+| Clé | Valeurs |
+|---|---|
+| `gender` | `male` (style `default/face1`) ou `female` (`default/face2`) ; `style` donne un style exact (`default/face1` à `default/face4`) |
+| `glasses` | `true` (verres clairs) / `false` |
+| `hair` | style homme : `black`, `bald`, `grey`, `brown`, `auburn`, `red`, ou un numéro de variante (0 à 8) |
+| `jacket`, `collar`, `chin` | homme : `dark` / `maroon` / `navy`, `blue` / `white` / `checked` / `open`, `narrow` / `square` / `stubble`, ou un numéro |
+| `build` | `large` : veste sombre, col ouvert, menton large (le portrait ne montre que la tête et les épaules) |
+| `tie`, `eyebrows`, `nose`, `lips`, `eyecolour`, `moustache` | numéro de variante |
+
+Les noms des variantes ont été repérés sur les sprites d'OpenGFX (le roux est la teinte la
+plus proche proposée par les visages d'OpenGFX). Ils sont définis dans `tools/gen_data.py`
+(`FACE_NAMED`, `FACE_BUILD`). Aucune image n'est ajoutée : le moteur assemble le visage
+avec les sprites d'OpenGFX (`DrawCompanyManagerFace`).
 
 ## Illustrations des projets
 
