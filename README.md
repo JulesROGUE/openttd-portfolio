@@ -87,7 +87,12 @@ par **le lecteur MIDI d'OpenTTD lui-même** (`MidiFile`), puis la suite des mess
 est confiée à `web/midisynth.js`, un **petit synthétiseur General MIDI en Web Audio** fait
 uniquement d'oscillateurs (sinus, triangle, carré, dent de scie, filtres, enveloppes) et
 de bruit calculé pour les percussions. Aucun échantillon ni banque de sons (SoundFont)
-n'est utilisé. Les morceaux s'enchaînent tout seuls grâce à la liste de lecture
+n'est utilisé. Chaque morceau est **rendu à l'avance** dans des `OfflineAudioContext`
+(mono, 22,05 kHz, tranches de 8 s rendues bien plus vite que le temps réel, la première
+en ≈ 0,1 s), puis les tranches sont jouées bout à bout, programmées sur l'horloge audio :
+la lecture ne dépend ni de la boucle du jeu ni des minuteries du navigateur (onglet
+masqué), et aucune limite de polyphonie ne coupe de notes. Les deux derniers morceaux
+rendus restent en cache. Les morceaux s'enchaînent tout seuls grâce à la liste de lecture
 d'OpenTTD (tous les titres, ordre aléatoire) : le pilote indique au jeu quand un morceau
 est fini. Avant le premier clic, le morceau demandé reste en attente.
 
