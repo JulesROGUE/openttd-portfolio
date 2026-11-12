@@ -400,7 +400,7 @@ struct PortfolioCollaboratorsWindow : Window {
 		if (widget != WID_PC_LIST || _portfolio_collaborators.empty()) return;
 		/* chaque collaborateur occupe trois paragraphes après l'introduction */
 		const NWidgetBase *nwid = this->GetWidget<NWidgetBase>(WID_PC_LIST);
-		Rect r{0, 0, static_cast<int>(nwid->current_x) - 1 - WidgetDimensions::scaled.frametext.Horizontal(), 0};
+		Rect r{0, 0, static_cast<int>(nwid->current_x) - 1 - static_cast<int>(WidgetDimensions::scaled.frametext.Horizontal()), 0};
 		auto paragraphs = this->Paragraphs();
 		int y = nwid->pos_y + WidgetDimensions::scaled.frametext.top + WidgetDimensions::scaled.framerect.top;
 		y += DrawParagraphs(r, {paragraphs[0]}, false);
