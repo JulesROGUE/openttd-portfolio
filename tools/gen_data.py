@@ -78,6 +78,7 @@ def main():
         '',
         '/** Un projet du portfolio, représenté par une ville. */',
         'struct PortfolioProject {',
+        '\tstd::string_view id;         ///< identifiant (illustrations : /images/projects/<id>/)',
         '\tstd::string_view title;      ///< titre, aussi nom de la ville',
         '\tstd::string_view subtitle;',
         '\tstd::string_view type;',
@@ -104,6 +105,7 @@ def main():
             raise SystemExit(f"titre trop long pour un nom de ville : {p['title']}")
         link = p['links'][0] if p.get('links') else {'label': '', 'url': ''}
         lines.append('\t{')
+        lines.append(f"\t\t{cstr(p['id'])},")
         lines.append(f"\t\t{cstr(p['title'])},")
         lines.append(f"\t\t{cstr(p.get('subtitle', ''))},")
         lines.append(f"\t\t{cstr(p.get('type', ''))},")

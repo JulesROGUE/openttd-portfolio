@@ -29,6 +29,16 @@ Une version **minimale et modifiée d'[OpenTTD](https://www.openttd.org) 15.3**,
 Les libellés des boutons sont en anglais, comme le reste de l'interface d'OpenTTD ; les
 textes des projets sont en français.
 
+## Illustrations des projets
+
+Exception accordée au principe « uniquement les ressources d'OpenTTD » : quand une fiche
+de projet est ouverte, la page du jeu affiche à côté (panneau HTML façon fenêtre OpenTTD,
+coin haut droit) **l'image de couverture et les captures du projet déjà présentes dans le
+portfolio** (`/images/projects/<id>/…`, déclarées dans les données des projets), avec
+*Prev* / *Next*. Elles sont chargées à la demande depuis julesrogue.fr, ne sont pas dans
+le paquet de données et ne servent qu'à illustrer les fiches : le jeu lui-même
+(graphismes, sons, musique) n'utilise que les ressources d'OpenTTD.
+
 ## Son et musique
 
 Les navigateurs n'autorisent aucun son avant une interaction de l'utilisateur. Au

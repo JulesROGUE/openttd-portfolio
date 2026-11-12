@@ -34,10 +34,18 @@ python3 "$PACKAGER" "$OUT/openttd.data" --preload "$FS@/" --js-output="$OUT/open
 echo "==> Bruitages OpenSFX (téléchargés au premier clic)"
 cp "$CACHE"/opensfx-1.0.3/{opensfx.obs,opensfx.cat,license.txt} "$OUT/sfx/"
 
+echo "==> Illustrations des projets (images du portfolio, servies par julesrogue.fr)"
+python3 - "$ROOT/data/projects.json" "$OUT/illustrations.json" <<'PY'
+import json, sys
+projects = json.load(open(sys.argv[1], encoding='utf-8'))
+out = {p['id']: {'title': p['title'], 'cover': p.get('cover', ''), 'gallery': p.get('gallery', [])} for p in projects}
+json.dump(out, open(sys.argv[2], 'w', encoding='utf-8'), ensure_ascii=False)
+PY
+
 echo "==> Moteur et coquille web"
 cp "$ROOT/build/wasm/openttd.js" "$ROOT/build/wasm/openttd.wasm" "$OUT/"
 cp "$ROOT"/web/{index.html,portfolio.js,portfolio.css,midisynth.js} "$OUT/"
-BUILD="$(cat "$OUT"/openttd.js "$OUT"/openttd.wasm "$OUT"/openttd-data.js "$OUT"/openttd.data "$OUT"/*.css "$OUT"/portfolio.js "$OUT"/midisynth.js | sha1sum | cut -c1-12)"
+BUILD="$(cat "$OUT"/openttd.js "$OUT"/openttd.wasm "$OUT"/openttd-data.js "$OUT"/openttd.data "$OUT"/*.css "$OUT"/portfolio.js "$OUT"/midisynth.js "$OUT"/illustrations.json | sha1sum | cut -c1-12)"
 sed -i "s/__BUILD__/$BUILD/g" "$OUT/index.html"
 echo "==> Build $BUILD"
 ls -la "$OUT" "$OUT/sfx"

@@ -25,7 +25,9 @@
         "label": "Code source (GitHub)",
         "url": "https://github.com/JulesROGUE/cube2-portfolio"
       }
-    ]
+    ],
+    "cover": "/images/projects/cube2/cover.jpg",
+    "gallery": []
   },
   {
     "id": "mineport",
@@ -49,7 +51,9 @@
     ],
     "team": "Projet personnel",
     "links": [],
-    "note": "Mineport n'est ni affilié ni approuvé par Mojang Studios ou Microsoft."
+    "note": "Mineport n'est ni affilié ni approuvé par Mojang Studios ou Microsoft.",
+    "cover": "/images/projects/mineport/cover.jpg",
+    "gallery": []
   },
   {
     "id": "magic",
@@ -75,6 +79,39 @@
       {
         "label": "magic.julesrogue.fr",
         "url": "https://magic.julesrogue.fr"
+      }
+    ],
+    "cover": "/images/projects/magic/cover.jpg",
+    "gallery": [
+      {
+        "title": "Vue d'ensemble",
+        "caption": "L'interface : on choisit une source (texte, SVG, image ou formes), on règle le rythme et le style, puis on exporte la map .adofai prête pour le jeu.",
+        "image": "/images/projects/magic/accueil.jpg"
+      },
+      {
+        "title": "Cercle magique",
+        "caption": "Une magic shape en rosace : les tuiles dessinent un cercle ajouré que la boule parcourt à rythme constant.",
+        "image": "/images/projects/magic/cercle.jpg"
+      },
+      {
+        "title": "Flocon de Koch",
+        "caption": "Une fractale générée d'un clic : la piste trace un flocon de Koch, tout en restant jouable en musique.",
+        "image": "/images/projects/magic/koch.jpg"
+      },
+      {
+        "title": "Courbe du dragon",
+        "caption": "Autre fractale : la courbe du dragon, convertie automatiquement en piste ADOFAI.",
+        "image": "/images/projects/magic/dragon.jpg"
+      },
+      {
+        "title": "Formes géométriques",
+        "caption": "Carrés, motifs en miroir, rosaces… des formes rectilignes ou arrondies réglées avec quelques curseurs.",
+        "image": "/images/projects/magic/carre.jpg"
+      },
+      {
+        "title": "Réglages dynamiques",
+        "caption": "La vitesse, la couleur, le style et l'opacité varient le long de la piste, avec multitaps et effets de caméra.",
+        "image": "/images/projects/magic/dynamique.jpg"
       }
     ]
   },
@@ -106,7 +143,9 @@
         "label": "julesrogue.fr",
         "url": "https://julesrogue.fr"
       }
-    ]
+    ],
+    "cover": "/images/projects/portfolio/cover.jpg",
+    "gallery": []
   },
   {
     "id": "leboncoin",
@@ -127,6 +166,59 @@
       "MVC"
     ],
     "team": "Projet de groupe, réalisé avec Roman Corobca",
-    "links": []
+    "links": [],
+    "cover": "/images/projects/leboncoin/cover.jpg",
+    "gallery": [
+      {
+        "title": "Page d'accueil",
+        "caption": "Le moteur de recherche par marque et par budget, suivi de la liste des dernières annonces publiées.",
+        "image": "/images/projects/leboncoin/accueil.jpg"
+      },
+      {
+        "title": "Création de compte",
+        "caption": "L'inscription des utilisateurs. Les mots de passe sont hachés en bcrypt avant d'être stockés en base.",
+        "image": "/images/projects/leboncoin/inscription.jpg"
+      },
+      {
+        "title": "Publier une annonce",
+        "caption": "Le formulaire de dépôt : marque, modèle, année, kilométrage, carburant, photos.",
+        "image": "/images/projects/leboncoin/creer-annonce.jpg"
+      },
+      {
+        "title": "Détail d'une annonce",
+        "caption": "La fiche complète du véhicule : caractéristiques, profil du vendeur, et bouton pour le contacter.",
+        "image": "/images/projects/leboncoin/detail-annonce.jpg"
+      },
+      {
+        "title": "Les favoris",
+        "caption": "Chaque utilisateur met de côté les annonces qui l'intéressent et les retrouve ici.",
+        "image": "/images/projects/leboncoin/favoris.jpg"
+      },
+      {
+        "title": "La messagerie",
+        "caption": "Une conversation entre un acheteur et un vendeur, avec notification des messages non lus.",
+        "image": "/images/projects/leboncoin/conversation.jpg"
+      },
+      {
+        "title": "Le profil vendeur",
+        "caption": "La page publique d'un vendeur : sa présentation et toutes les annonces qu'il a mises en ligne.",
+        "image": "/images/projects/leboncoin/profil.jpg"
+      },
+      {
+        "title": "Tableau de bord admin",
+        "caption": "L'espace réservé aux administrateurs : nombre d'utilisateurs, nombre d'annonces, accès rapide.",
+        "image": "/images/projects/leboncoin/admin-dashboard.jpg"
+      },
+      {
+        "title": "Gestion des utilisateurs",
+        "caption": "L'administrateur peut modifier, bannir ou supprimer un compte, et ouvrir la messagerie d'un membre.",
+        "image": "/images/projects/leboncoin/admin-users.jpg"
+      },
+      {
+        "title": "Gestion des annonces",
+        "caption": "La modération : édition, masquage et suppression des annonces publiées.",
+        "image": "/images/projects/leboncoin/admin-annonces.jpg"
+      }
+    ]
   }
 ]

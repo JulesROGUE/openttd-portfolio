@@ -119,6 +119,62 @@
     onAbort: function () { loadError('le jeu a planté'); },
   };
 
+  // --- Illustration du projet ouvert ------------------------------------------------
+  // Exception accordée pour les illustrations : la couverture et les captures déjà
+  // présentes dans le portfolio (/images/projects/…), chargées seulement quand on ouvre
+  // la fiche d'un projet. Rien de tout cela n'entre dans le jeu lui-même.
+  var illus = { data: null, open: [], id: '', index: 0 };
+  var illusEl = document.getElementById('illus');
+  function illusSlides(id) {
+    var p = illus.data && illus.data[id];
+    if (!p) return [];
+    var slides = p.cover ? [{ image: p.cover, caption: '' }] : [];
+    return slides.concat((p.gallery || []).map(function (g) { return { image: g.image, caption: g.title + ' — ' + g.caption }; }));
+  }
+  function illusRender() {
+    var slides = illusSlides(illus.id);
+    if (!slides.length) { illusEl.hidden = true; return; }
+    var s = slides[illus.index % slides.length];
+    document.getElementById('il-title').textContent = illus.data[illus.id].title;
+    var img = document.getElementById('il-img');
+    img.className = illus.index ? 'shot' : '';
+    img.src = s.image;
+    img.alt = illus.data[illus.id].title;
+    document.getElementById('il-caption').textContent = s.caption;
+    document.getElementById('il-nav').hidden = slides.length < 2;
+    document.getElementById('il-count').textContent = (illus.index + 1) + ' / ' + slides.length;
+    illusEl.hidden = false;
+  }
+  function illusShow(id) {
+    illus.id = id;
+    illus.index = 0;
+    if (illus.data) return illusRender();
+    fetch(versioned('illustrations.json')).then(function (r) { return r.json(); })
+      .then(function (d) { illus.data = d; if (illus.id) illusRender(); })
+      .catch(function (e) { console.warn('[illustrations] ' + e); });
+  }
+  Module.onProjectOpen = function (id) {
+    illus.open = illus.open.filter(function (x) { return x !== id; }).concat([id]);
+    illusShow(id);
+  };
+  Module.onProjectClose = function (id) {
+    illus.open = illus.open.filter(function (x) { return x !== id; });
+    if (illus.id !== id) return;
+    if (illus.open.length) illusShow(illus.open[illus.open.length - 1]);
+    else { illus.id = ''; illusEl.hidden = true; }
+  };
+  function illusStep(d) {
+    var n = illusSlides(illus.id).length;
+    if (!n) return;
+    illus.index = (illus.index + d + n) % n;
+    illusRender();
+  }
+  document.getElementById('il-prev').addEventListener('click', function () { illusStep(-1); });
+  document.getElementById('il-next').addEventListener('click', function () { illusStep(1); });
+  document.getElementById('il-close').addEventListener('click', function () { illusEl.hidden = true; });
+  // les clics sur le panneau ne doivent pas atteindre la carte
+  illusEl.addEventListener('mousedown', function (e) { e.stopPropagation(); });
+
   // --- Son : rien avant le premier geste de l'utilisateur --------------------------
   var soundsRequested = false, soundsLoaded = false;
   function loadSounds() {

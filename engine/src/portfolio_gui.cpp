@@ -144,6 +144,34 @@ struct PortfolioProjectWindow : Window {
 		this->flags.Set(WindowFlag::DisableVpScroll);
 		this->GetWidget<NWidgetViewport>(WID_PP_VIEWPORT)->InitializeViewport(this, this->town->xy, ScaleZoomGUI(ZoomLevel::Town));
 		this->SetWidgetDisabledState(WID_PP_LINK, this->project == nullptr || this->project->link_url.empty());
+#ifdef __EMSCRIPTEN__
+		/* la coquille web affiche l'illustration du projet à côté de la fiche */
+		if (this->project != nullptr) {
+			std::string id(this->project->id);
+			EM_ASM({ if (Module.onProjectOpen) Module.onProjectOpen(UTF8ToString($0)); }, id.c_str());
+		}
+#endif
+	}
+
+	void Close([[maybe_unused]] int data = 0) override
+	{
+#ifdef __EMSCRIPTEN__
+		if (this->project != nullptr) {
+			std::string id(this->project->id);
+			EM_ASM({ if (Module.onProjectClose) Module.onProjectClose(UTF8ToString($0)); }, id.c_str());
+		}
+#endif
+		this->Window::Close();
+	}
+
+	/** Sous la fenêtre d'accueil, à gauche : le coin haut droit reste libre pour l'illustration. */
+	Point OnInitialPosition([[maybe_unused]] int16_t sm_width, [[maybe_unused]] int16_t sm_height, [[maybe_unused]] int window_number) override
+	{
+		int top = ScaleGUITrad(8);
+		const Window *welcome = FindWindowById(WC_PORTFOLIO_WELCOME, 0);
+		if (welcome != nullptr) top = welcome->top + welcome->height + ScaleGUITrad(6);
+		if (top + sm_height > _screen.height - ScaleGUITrad(16)) top = std::max(0, _screen.height - ScaleGUITrad(16) - sm_height);
+		return { ScaleGUITrad(8), top };
 	}
 
 	std::vector<PortfolioParagraph> Paragraphs() const

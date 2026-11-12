@@ -10,6 +10,13 @@
 </head>
 <body>
   <canvas id="canvas" class="emscripten" tabindex="0" oncontextmenu="event.preventDefault()"></canvas>
+  <!-- illustration du projet ouvert (images du portfolio, chargées à la demande) -->
+  <div id="illus" hidden>
+    <div class="il-title"><span id="il-title"></span><button type="button" id="il-close" title="Close">×</button></div>
+    <img id="il-img" alt="">
+    <div class="il-caption" id="il-caption"></div>
+    <div class="il-nav" id="il-nav"><button type="button" id="il-prev">&lt; Prev</button><span id="il-count"></span><button type="button" id="il-next">Next &gt;</button></div>
+  </div>
   <!-- écran de chargement : étape, barre de progression, Mo téléchargés / total -->
   <div id="loading">
     <div class="ld-box">

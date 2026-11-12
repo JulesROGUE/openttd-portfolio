@@ -19,3 +19,27 @@ html, body { margin: 0; height: 100%; overflow: hidden; background: #000; }
 .ld-status { margin-top: 4px; font: 11px monospace; color: #6f819a; }
 .ld-error { color: #ff9a8a; }
 #loading.done { display: none; }
+
+/* Illustration du projet ouvert : fenêtre façon OpenTTD (brun), coin haut droit */
+#illus {
+  position: absolute; top: 8px; right: 8px; z-index: 3; width: min(384px, 42vw);
+  background: #8c6c3c; border: 1px solid #3c2c14; box-shadow: inset 1px 1px 0 #c8a46c;
+  font: 12px "DejaVu Sans", Verdana, sans-serif; color: #000; cursor: default; user-select: none;
+}
+#illus[hidden] { display: none; }
+.il-title { display: flex; align-items: center; height: 16px; padding-left: 6px;
+  background: #6c4c20; color: #fff; font-weight: bold; text-shadow: 1px 1px 0 #000; }
+.il-title span { flex: 1; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+#illus button { font: inherit; color: #000; background: #a88450; border: 1px solid #3c2c14;
+  box-shadow: inset 1px 1px 0 #d8b47c; padding: 0 6px; cursor: pointer; }
+#illus button:active { box-shadow: inset 1px 1px 0 #5c3c14; }
+#il-close { height: 16px; width: 18px; padding: 0; line-height: 12px; }
+#il-img { display: block; width: calc(100% - 8px); margin: 4px; aspect-ratio: 8 / 3; object-fit: cover;
+  background: #2c2014; border: 1px solid #3c2c14; }
+#il-img.shot { aspect-ratio: auto; max-height: 40vh; object-fit: contain; }
+.il-caption { padding: 0 6px 4px; line-height: 1.35; }
+.il-caption:empty { display: none; }
+.il-nav { display: flex; align-items: center; gap: 6px; padding: 0 4px 4px; }
+.il-nav span { flex: 1; text-align: center; }
+.il-nav[hidden] { display: none; }
+@media (max-width: 700px) { #illus { display: none; } }
