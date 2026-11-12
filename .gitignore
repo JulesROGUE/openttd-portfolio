@@ -1,0 +1,8 @@
+# Artefacts de build (reconstruits par les scripts / docker)
+build/
+dist/
+third_party/
+node_modules/
+*.gz
+*.log
+__pycache__/

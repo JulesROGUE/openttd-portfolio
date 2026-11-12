@@ -1,0 +1,132 @@
+[
+  {
+    "id": "cube2",
+    "title": "Cube 2 Portfolio",
+    "subtitle": "Mon portfolio en FPS multijoueur, dans le navigateur",
+    "type": "Projet personnel",
+    "summary": "Une version minimale et modifiée de Cube 2: Sauerbraten, le moteur FPS libre en C++, compilée en WebAssembly avec Emscripten. Le joueur apparaît sous le nom de son compte du portfolio et visite une carte qui reprend tous les éléments du site (projets, compétences, CV, certifications), guidé par une petite histoire. Plusieurs visiteurs peuvent se retrouver sur le même serveur.",
+    "highlights": [
+      "Moteur C++ porté en WebAssembly (Emscripten, WebGL)",
+      "Serveur dédié conteneurisé avec Docker et pont WebSocket",
+      "Le pseudo du joueur reprend le compte de la session",
+      "Carte et scénario dédiés au portfolio, contenu allégé au strict nécessaire"
+    ],
+    "stack": [
+      "C++",
+      "WebAssembly",
+      "Emscripten",
+      "WebGL",
+      "WebSocket",
+      "Docker"
+    ],
+    "team": "Projet personnel, dépôt public",
+    "links": [
+      {
+        "label": "Code source (GitHub)",
+        "url": "https://github.com/JulesROGUE/cube2-portfolio"
+      }
+    ]
+  },
+  {
+    "id": "mineport",
+    "title": "Mineport",
+    "subtitle": "Minecraft: Java Edition porté en C# / MonoGame",
+    "type": "Projet personnel",
+    "summary": "Un portage de Minecraft: Java Edition en C# avec MonoGame, en rendu OpenGL ou Vulkan. Chaque version est une traduction fidèle du code Java du jeu : mêmes classes, même logique, génération de monde identique. Autour de ce cœur, Mineport ajoute le multijoueur, les comptes Microsoft ou hors ligne, des fonctions inspirées d'OptiFine (shaders, capes, zoom) et un chargeur de mods .NET inspiré de Forge.",
+    "highlights": [
+      "Une branche par version : 1.12.2, 1.7.10, 26.3 (portage en cours)",
+      "Mineport Launcher séparé (C#) : comptes, versions, ressources",
+      "Chaque version est livrée comme une DLL unique, l’équivalent du .jar",
+      "Aucune ressource de Mojang hébergée : elles sont téléchargées par le launcher"
+    ],
+    "stack": [
+      "C#",
+      ".NET",
+      "MonoGame",
+      "OpenGL",
+      "Vulkan",
+      "PowerShell"
+    ],
+    "team": "Projet personnel",
+    "links": [],
+    "note": "Mineport n'est ni affilié ni approuvé par Mojang Studios ou Microsoft."
+  },
+  {
+    "id": "magic",
+    "title": "Magic Shape Generator",
+    "subtitle": "Créateur de « magic shapes » pour A Dance of Fire and Ice",
+    "type": "Projet personnel",
+    "summary": "Un outil web dédié à la création de « magic shapes » pour A Dance of Fire and Ice. Une magic shape, c'est un niveau où les tuiles ne forment pas une simple ligne mais dessinent une forme (cercle, lettres, fractale, image…) : la boule la parcourt à rythme constant grâce à des événements SetSpeed et des twirls automatiques, si bien que le dessin se trace tout en restant jouable en musique. L'appli part d'un texte, d'un SVG, d'une image ou de formes générées, offre un éditeur de tracé, des multitaps et des effets de caméra, puis exporte la map .adofai — le tout dans le navigateur.",
+    "highlights": [
+      "Sources : texte, SVG, image ou formes générées (fractales, rosaces…)",
+      "Éditeur de tracé, multitaps et effets de caméra",
+      "Export direct de la map .adofai",
+      "100 % côté client, sans dépendance"
+    ],
+    "stack": [
+      "HTML",
+      "JavaScript",
+      "Canvas 2D",
+      "Docker",
+      "nginx"
+    ],
+    "team": "Projet personnel, en ligne",
+    "links": [
+      {
+        "label": "magic.julesrogue.fr",
+        "url": "https://magic.julesrogue.fr"
+      }
+    ]
+  },
+  {
+    "id": "portfolio",
+    "title": "Portfolio OS",
+    "subtitle": "Ce site : un bureau façon système d’exploitation",
+    "type": "Projet personnel",
+    "summary": "Le portfolio que vous parcourez : un bureau inspiré de GNOME/macOS avec fenêtres déplaçables et redimensionnables, dock, barre des tâches et applications (CV, compétences, certifications, chat en temps réel, veille Tux…). Les visiteurs peuvent se connecter avec un compte invité éphémère.",
+    "highlights": [
+      "Gestionnaire de fenêtres maison (déplacement, redimensionnement, plein écran, effet « genie »)",
+      "API REST Node/Express, sessions par jeton, mots de passe hachés (scrypt)",
+      "Comptes invités purgés automatiquement, salon de discussion façon IRC (Kanal) avec réponses",
+      "Déploiement Docker Compose derrière nginx en HTTPS"
+    ],
+    "stack": [
+      "Aurelia 1",
+      "JavaScript",
+      "Bootstrap 5",
+      "Node.js",
+      "Express",
+      "MariaDB",
+      "Docker",
+      "nginx"
+    ],
+    "team": "Projet personnel, en ligne",
+    "links": [
+      {
+        "label": "julesrogue.fr",
+        "url": "https://julesrogue.fr"
+      }
+    ]
+  },
+  {
+    "id": "leboncoin",
+    "title": "Leboncoin Auto",
+    "subtitle": "Petites annonces automobiles",
+    "type": "Projet de groupe",
+    "summary": "Un clone de Leboncoin dédié aux véhicules : dépôt d'annonces, recherche multicritère, favoris, messagerie entre membres et espace d'administration.",
+    "highlights": [
+      "Architecture MVC en PHP 8",
+      "Mots de passe hachés en bcrypt",
+      "Catalogue embarqué de 1802 modèles de véhicules",
+      "Back-office : modération des annonces et gestion des comptes"
+    ],
+    "stack": [
+      "PHP 8",
+      "MySQL",
+      "Bootstrap 5",
+      "MVC"
+    ],
+    "team": "Projet de groupe, réalisé avec Roman Corobca",
+    "links": []
+  }
+]
