@@ -68,6 +68,12 @@ n'est utilisé. Les morceaux s'enchaînent tout seuls grâce à la liste de lect
 d'OpenTTD (tous les titres, ordre aléatoire) : le pilote indique au jeu quand un morceau
 est fini. Avant le premier clic, le morceau demandé reste en attente.
 
+**Coupure globale** : le jeu suit le bouton de son du bureau du portfolio (clé
+`localStorage['portfolioos:sounds-muted']`, événement `storage` et message
+`portfolioos:mute`). Tous les AudioContext (bruitages SDL et synthé) sont suspendus tant
+que le son est coupé, et le réveil au premier clic ne les rallume pas (bloc repris de
+Cube 2, en tête de `web/portfolio.js`).
+
 ## Ressources : uniquement celles d'OpenTTD
 
 | Élément | Auteur | Licence | Utilisation |

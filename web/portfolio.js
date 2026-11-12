@@ -5,11 +5,55 @@
  *  - demander toutes les ressources avec ?v=<build> (caches navigateur et Cloudflare) ;
  *  - réveiller l'audio au premier clic (les navigateurs l'interdisent avant) :
  *    contexte Web Audio de SDL (bruitages) et synthé MIDI (musique, midisynth.js) ;
+ *  - suivre la coupure globale du son du portfolio (applet KMix du bureau : clé
+ *    localStorage « portfolioos:sounds-muted » et message « portfolioos:mute »),
+ *    bloc repris tel quel de Cube 2 ;
  *  - télécharger les bruitages OpenSFX à ce moment-là seulement (13 Mo), puis
  *    demander au moteur de les utiliser (pf_load_sounds).
  */
 (function () {
   'use strict';
+
+  // --- Coupure globale du son du portfolio (applet KMix du bureau) -----------
+  // Même origine que le portfolio : on lit sa clé de localStorage, on suit
+  // l'événement `storage` et le message `portfolioos:mute`. Tous les
+  // AudioContext créés par le moteur (sons et musique) sont suspendus tant que
+  // c'est coupé, et le moteur ne peut pas les relancer lui-même.
+  (function () {
+    var KEY = 'portfolioos:sounds-muted';
+    var AC = window.AudioContext || window.webkitAudioContext;
+    if (!AC || AC.__portfolioMute) return;
+    var contexts = [];
+    var muted = false;
+    try { muted = localStorage.getItem(KEY) === '1'; } catch (e) {}
+    var resume = AC.prototype.resume;
+    AC.prototype.resume = function () {
+      return muted ? Promise.resolve() : resume.call(this);
+    };
+    function Wrapped(opts) {
+      var ctx = opts === undefined ? new AC() : new AC(opts);
+      contexts.push(ctx);
+      if (muted) ctx.suspend();
+      return ctx;
+    }
+    Wrapped.prototype = AC.prototype;
+    Wrapped.__portfolioMute = true;
+    window.AudioContext = Wrapped;
+    window.webkitAudioContext = Wrapped;
+    function apply(value) {
+      muted = value;
+      contexts.forEach(function (ctx) {
+        if (ctx.state === 'closed') return;
+        if (muted) ctx.suspend(); else resume.call(ctx).catch(function () {});
+      });
+    }
+    window.addEventListener('storage', function (e) {
+      if (e.key === KEY) apply(e.newValue === '1');
+    });
+    window.addEventListener('message', function (e) {
+      if (e.origin === location.origin && e.data && e.data.type === 'portfolioos:mute') apply(!!e.data.muted);
+    });
+  })();
 
   var canvas = document.getElementById('canvas');
   var loading = document.getElementById('loading');
