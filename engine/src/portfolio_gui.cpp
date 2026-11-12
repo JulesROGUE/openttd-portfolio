@@ -76,20 +76,38 @@ struct PortfolioParagraph {
 	TextColour colour;
 	std::string text;
 	int gap_before; ///< espace avant, en lignes / 2
+	std::string url{}; ///< lien ouvert au clic (http/https des données), sinon vide
+};
+
+/** Zone cliquable d'un lien, en coordonnées de la fenêtre. */
+struct PortfolioLinkArea {
+	Rect rect;
+	std::string url;
 };
 
 /**
  * Dessine (ou mesure, si draw == false) une suite de paragraphes dans la largeur de r.
  * @return la hauteur utilisée
  */
-static int DrawParagraphs(const Rect &r, const std::vector<PortfolioParagraph> &paragraphs, bool draw)
+static int DrawParagraphs(const Rect &r, const std::vector<PortfolioParagraph> &paragraphs, bool draw,
+		std::vector<PortfolioLinkArea> *links = nullptr, std::string_view hover = {})
 {
 	int y = r.top;
 	int half = GetCharacterHeight(FS_NORMAL) / 2;
 	for (const auto &p : paragraphs) {
 		y += p.gap_before * half;
 		int h = GetStringHeight(p.text, r.Width());
-		if (draw) DrawStringMultiLine(r.left, r.right, y, y + h, p.text, p.colour, SA_TOP | SA_LEFT);
+		if (p.url.empty()) {
+			if (draw) DrawStringMultiLine(r.left, r.right, y, y + h, p.text, p.colour, SA_TOP | SA_LEFT);
+		} else {
+			/* lien : bleu clair souligné, blanc au survol */
+			bool hovered = !hover.empty() && hover == p.url;
+			if (draw) DrawStringMultiLine(r.left, r.right, y, y + h, p.text, hovered ? TC_WHITE : TC_LIGHT_BLUE, SA_TOP | SA_LEFT, true);
+			if (links != nullptr) {
+				int w = std::min<int>(r.Width(), GetStringBoundingBox(p.text).width);
+				links->push_back({Rect{r.left, y, r.left + w - 1, y + h - 1}, p.url});
+			}
+		}
 		y += h;
 	}
 	return y - r.top;
@@ -139,6 +157,8 @@ static WindowDesc _portfolio_project_desc(
 struct PortfolioProjectWindow : Window {
 	const Town *town = nullptr;
 	const PortfolioProject *project = nullptr;
+	mutable std::vector<PortfolioLinkArea> link_areas; ///< liens du texte, relevés au dessin
+	std::string hover_url; ///< lien survolé
 
 	PortfolioProjectWindow(WindowDesc &desc, WindowNumber window_number) : Window(desc)
 	{
@@ -147,7 +167,7 @@ struct PortfolioProjectWindow : Window {
 		this->InitNested(window_number);
 		this->flags.Set(WindowFlag::DisableVpScroll);
 		this->GetWidget<NWidgetViewport>(WID_PP_VIEWPORT)->InitializeViewport(this, this->town->xy, ScaleZoomGUI(ZoomLevel::Town));
-		this->SetWidgetDisabledState(WID_PP_LINK, this->project == nullptr || this->project->link_url.empty());
+		this->SetWidgetDisabledState(WID_PP_LINK, this->project == nullptr || this->project->links.empty());
 #ifdef __EMSCRIPTEN__
 		/* la coquille web affiche l'illustration du projet à côté de la fiche */
 		if (this->project != nullptr) {
@@ -197,9 +217,11 @@ struct PortfolioProjectWindow : Window {
 		out.push_back({TC_BLACK, std::string(p->stack), 0});
 		out.push_back({TC_ORANGE, "Équipe", 1});
 		out.push_back({TC_BLACK, std::string(p->team), 0});
-		if (!p->link_url.empty()) {
-			out.push_back({TC_ORANGE, "Lien", 1});
-			out.push_back({TC_BLACK, std::string(p->link_label) + " : " + std::string(p->link_url), 0});
+		if (!p->links.empty()) {
+			out.push_back({TC_ORANGE, p->links.size() > 1 ? "Liens" : "Lien", 1});
+			for (const auto &l : p->links) {
+				out.push_back({TC_LIGHT_BLUE, std::string(l.label) + " : " + std::string(l.url), 0, std::string(l.url)});
+			}
 		}
 		if (!p->note.empty()) out.push_back({TC_GREY, std::string(p->note), 1});
 		return out;
@@ -225,14 +247,44 @@ struct PortfolioProjectWindow : Window {
 	void DrawWidget(const Rect &r, WidgetID widget) const override
 	{
 		if (widget != WID_PP_TEXT) return;
-		DrawParagraphs(r.Shrink(WidgetDimensions::scaled.frametext, WidgetDimensions::scaled.framerect), this->Paragraphs(), true);
+		this->link_areas.clear();
+		DrawParagraphs(r.Shrink(WidgetDimensions::scaled.frametext, WidgetDimensions::scaled.framerect), this->Paragraphs(), true, &this->link_areas, this->hover_url);
+		/* r est déjà en coordonnées de la fenêtre : les zones aussi */
+	}
+
+	/** Survol : le lien sous la souris passe en blanc (le jeu dessine son propre curseur). */
+	void OnMouseOver(Point pt, WidgetID widget) override
+	{
+		std::string hover;
+		if (widget == WID_PP_TEXT) {
+			for (const auto &area : this->link_areas) {
+				if (IsInsideMM(pt.x, area.rect.left, area.rect.right + 1) && IsInsideMM(pt.y, area.rect.top, area.rect.bottom + 1)) {
+					hover = area.url;
+					break;
+				}
+			}
+		}
+		if (hover != this->hover_url) {
+			this->hover_url = hover;
+			this->SetWidgetDirty(WID_PP_TEXT);
+		}
 	}
 
 	void OnClick([[maybe_unused]] Point pt, WidgetID widget, [[maybe_unused]] int click_count) override
 	{
 		switch (widget) {
 			case WID_PP_CENTER: ScrollMainWindowToTile(this->town->xy); break;
-			case WID_PP_LINK: if (this->project != nullptr && !this->project->link_url.empty()) OpenBrowser(std::string(this->project->link_url)); break;
+			case WID_PP_LINK: if (this->project != nullptr && !this->project->links.empty()) OpenBrowser(std::string(this->project->links.front().url)); break;
+			case WID_PP_TEXT: {
+				/* clic sur un lien du texte */
+				for (const auto &area : this->link_areas) {
+					if (IsInsideMM(pt.x, area.rect.left, area.rect.right + 1) && IsInsideMM(pt.y, area.rect.top, area.rect.bottom + 1)) {
+						OpenBrowser(area.url);
+						break;
+					}
+				}
+				break;
+			}
 			case WID_PP_COLLABORATORS: ShowPortfolioCollaborators(); break;
 		}
 	}

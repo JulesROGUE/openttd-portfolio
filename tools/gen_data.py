@@ -141,6 +141,12 @@ def main():
         '#include <string_view>',
         '#include <vector>',
         '',
+        '/** Un lien d\'un projet (http ou https uniquement, vérifié à la génération). */',
+        'struct PortfolioLink {',
+        '\tstd::string_view label;',
+        '\tstd::string_view url;',
+        '};',
+        '',
         '/** Un projet du portfolio, représenté par une ville. */',
         'struct PortfolioProject {',
         '\tstd::string_view id;         ///< identifiant (illustrations : /images/projects/<id>/)',
@@ -151,8 +157,7 @@ def main():
         '\tstd::vector<std::string_view> highlights;',
         '\tstd::string_view stack;',
         '\tstd::string_view team;',
-        '\tstd::string_view link_label;',
-        '\tstd::string_view link_url;',
+        '\tstd::vector<PortfolioLink> links;',
         '\tstd::string_view note;',
         '};',
         '',
@@ -176,7 +181,9 @@ def main():
     for i, p in enumerate(projects):
         if len(clean(p['title'])) > 32:
             raise SystemExit(f"titre trop long pour un nom de ville : {p['title']}")
-        link = p['links'][0] if p.get('links') else {'label': '', 'url': ''}
+        for link in p.get('links', []):
+            if not re.match(r'^https?://[^\s"<>]+$', link['url']):
+                raise SystemExit(f"lien refusé (http/https uniquement) : {link['url']}")
         lines.append('\t{')
         lines.append(f"\t\t{cstr(p['id'])},")
         lines.append(f"\t\t{cstr(p['title'])},")
@@ -186,8 +193,7 @@ def main():
         lines.append('\t\t{' + ', '.join(cstr(h) for h in p.get('highlights', [])) + '},')
         lines.append(f"\t\t{cstr(', '.join(p.get('stack', [])))},")
         lines.append(f"\t\t{cstr(p.get('team', ''))},")
-        lines.append(f"\t\t{cstr(link['label'])},")
-        lines.append(f"\t\t{cstr(link['url'])},")
+        lines.append('\t\t{' + ', '.join(f"{{ {cstr(l['label'])}, {cstr(l['url'])} }}" for l in p.get('links', [])) + '},')
         lines.append(f"\t\t{cstr(p.get('note', ''))},")
         lines.append('\t},')
         for name in collaborators(p):

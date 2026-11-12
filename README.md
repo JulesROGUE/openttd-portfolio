@@ -17,8 +17,10 @@ Une version **minimale et modifiée d'[OpenTTD](https://www.openttd.org) 15.3**,
   relief, des lacs et des rivières, des routes (et des ponts) entre les villes, et des
   bus qui font la navette entre la ville centrale et les autres.
 - **Un clic sur un bâtiment** (ou sur le nom d'une ville) ouvre la **fiche du projet** :
-  sous-titre, type, résumé, points forts, technologies, équipe, lien. Boutons :
-  *Show on map*, *Open link* (nouvel onglet), *Collaborators*.
+  sous-titre, type, résumé, points forts, technologies, équipe, liens. Chaque lien du
+  projet (champ `links`, http/https uniquement, vérifié à la génération) est **cliquable
+  dans le texte** : bleu clair souligné, blanc au survol, ouverture dans un nouvel onglet
+  (`noopener`). Boutons : *Show on map*, *Open link* (premier lien), *Collaborators*.
 - **Collaborateurs** : bouton *Collaborators* (fiche d'un projet ou fenêtre d'accueil),
   puis un clic sur un nom ouvre la **fiche du collaborateur**, comme la fenêtre d'une
   compagnie : son **avatar** est un visage de président dessiné par le moteur
