@@ -37,6 +37,15 @@ Une version **minimale et modifiée d'[OpenTTD](https://www.openttd.org) 15.3**,
 Les libellés des boutons sont en anglais, comme le reste de l'interface d'OpenTTD ; les
 textes des projets sont en français.
 
+## Panneau d'illustration (coquille web)
+
+À côté de la fiche d'un projet, la page affiche la couverture et les captures du projet dans
+un panneau HTML dessiné comme une fenêtre du jeu (relevé au pixel, interface à 100 %) :
+brun de l'interface, reliefs clairs / sombres, case de fermeture à gauche avec la croix du
+jeu, titre centré, et police **OpenTTD Sans** (version TrueType de la police du jeu par
+Zephyris, GPL v2, fournie avec les sources d'OpenTTD et copiée dans `fonts/` par
+`scripts/build-web.sh`).
+
 ## Avatars des collaborateurs (`data/collaborators.json`)
 
 L'avatar d'un collaborateur est un visage de président d'OpenTTD. Par défaut, tout est

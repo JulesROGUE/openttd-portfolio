@@ -45,6 +45,10 @@ PY
 echo "==> Moteur et coquille web"
 cp "$ROOT/build/wasm/openttd.js" "$ROOT/build/wasm/openttd.wasm" "$OUT/"
 cp "$ROOT"/web/{index.html,portfolio.js,portfolio.css,midisynth.js} "$OUT/"
+# police du panneau d'illustration : OpenTTD Sans (version TrueType de la police du jeu,
+# Zephyris, GPL v2), fournie avec les sources d'OpenTTD
+mkdir -p "$OUT/fonts"
+cp "$ROOT/build/src/media/baseset/OpenTTD-Sans.ttf" "$ROOT/build/src/media/baseset/OpenTTD-font.md" "$OUT/fonts/"
 BUILD="$(cat "$OUT"/openttd.js "$OUT"/openttd.wasm "$OUT"/openttd-data.js "$OUT"/openttd.data "$OUT"/*.css "$OUT"/portfolio.js "$OUT"/midisynth.js "$OUT"/illustrations.json | sha1sum | cut -c1-12)"
 sed -i "s/__BUILD__/$BUILD/g" "$OUT/index.html"
 echo "==> Build $BUILD"

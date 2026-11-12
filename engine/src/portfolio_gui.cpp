@@ -188,6 +188,19 @@ struct PortfolioProjectWindow : Window {
 		this->Window::Close();
 	}
 
+	/**
+	 * Fenêtre déplacée ou redimensionnée (notamment quand le navigateur change de taille :
+	 * le moteur replace toutes les fenêtres) : l'aperçu de la ville suit son widget,
+	 * comme dans la fenêtre de ville d'OpenTTD (town_gui.cpp). Sans cela, il restait à
+	 * son ancienne place, décalé vers la croix de fermeture ou hors de la fenêtre.
+	 */
+	void OnResize() override
+	{
+		if (this->viewport == nullptr) return;
+		this->GetWidget<NWidgetViewport>(WID_PP_VIEWPORT)->UpdateViewportCoordinates(this);
+		ScrollWindowToTile(this->town->xy, this, true); // recentre l'aperçu sur la ville
+	}
+
 	/** Sous la fenêtre d'accueil, à gauche : le coin haut droit reste libre pour l'illustration. */
 	Point OnInitialPosition([[maybe_unused]] int16_t sm_width, [[maybe_unused]] int16_t sm_height, [[maybe_unused]] int window_number) override
 	{

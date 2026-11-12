@@ -14,26 +14,54 @@ body.game-ready { cursor: none; }
 }
 #ld-step.ld-error { color: #ff9a8a; }
 
-/* Illustration du projet ouvert : fenêtre façon OpenTTD (brun), coin haut droit */
+/* Illustration du projet ouvert : fenêtre dessinée comme celles du jeu (relevé au pixel
+ * sur une capture d'OpenTTD, interface à 100 %) : brun de l'interface (#98845c, reliefs
+ * #d4bc94 / #68502c), case de fermeture à GAUCHE (15 × 18 px, croix de la police du jeu),
+ * titre centré en blanc ombré, police OpenTTD Sans (la version TrueType de la police du
+ * jeu, GPL v2, fournie avec OpenTTD) à 10 px comme dans le jeu. */
+@font-face {
+  font-family: "OpenTTD Sans";
+  src: url("fonts/OpenTTD-Sans.ttf") format("truetype");
+  font-display: block;
+}
 #illus {
+  --ot-face: #98845c; --ot-light: #d4bc94; --ot-dark: #68502c; --ot-text: #101010;
   position: absolute; top: 8px; right: 8px; z-index: 3; width: min(384px, 42vw);
-  background: #8c6c3c; border: 1px solid #3c2c14; box-shadow: inset 1px 1px 0 #c8a46c;
-  font: 12px "DejaVu Sans", Verdana, sans-serif; color: #000; cursor: default !important; user-select: none;
+  background: var(--ot-face);
+  font: 10px/12px "OpenTTD Sans", sans-serif; color: var(--ot-text);
+  cursor: default !important; user-select: none;
+  -webkit-font-smoothing: none; font-smooth: never;
 }
 #illus[hidden] { display: none; }
-.il-title { display: flex; align-items: center; height: 16px; padding-left: 6px;
-  background: #6c4c20; color: #fff; font-weight: bold; text-shadow: 1px 1px 0 #000; }
-.il-title span { flex: 1; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
-#illus button { font: inherit; color: #000; background: #a88450; border: 1px solid #3c2c14;
-  box-shadow: inset 1px 1px 0 #d8b47c; padding: 0 6px; cursor: pointer !important; }
-#illus button:active { box-shadow: inset 1px 1px 0 #5c3c14; }
-#il-close { height: 16px; width: 18px; padding: 0; line-height: 12px; }
-#il-img { display: block; width: calc(100% - 8px); margin: 4px; aspect-ratio: 8 / 3; object-fit: cover;
-  background: #2c2014; border: 1px solid #3c2c14; }
+/* relief d'OpenTTD : clair en haut à gauche, sombre en bas à droite */
+.il-title, #il-close, .il-body, #illus button {
+  border: 1px solid; border-color: var(--ot-light) var(--ot-dark) var(--ot-dark) var(--ot-light);
+}
+.il-title { display: flex; height: 18px; border: 0; }
+#il-close {
+  flex: 0 0 15px; height: 18px; padding: 0; background: var(--ot-face) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='7' height='8' shape-rendering='crispEdges'%3E%3Cpath fill='%23101010' d='M0 0h2v1H0zM5 0h2v1H5zM0 1h3v1H0zM4 1h3v1H4zM1 2h5v1H1zM2 3h3v2H2zM1 5h5v1H1zM0 6h3v1H0zM4 6h3v1H4zM0 7h2v1H0zM5 7h2v1H5z'/%3E%3C/svg%3E") no-repeat 3px 3px;
+}
+/* légende : cadre en relief avec un liseré intérieur creusé */
+.il-title span {
+  flex: 1; min-width: 0; height: 18px; box-sizing: border-box; padding: 0 4px;
+  border: 1px solid; border-color: var(--ot-light) var(--ot-dark) var(--ot-dark) var(--ot-light);
+  box-shadow: inset 1px 1px 0 var(--ot-dark), inset -1px -1px 0 var(--ot-light);
+  color: #fff; text-shadow: 1px 1px 0 var(--ot-text); line-height: 16px; text-align: center;
+  overflow: hidden; white-space: nowrap; text-overflow: ellipsis;
+}
+.il-body { padding: 2px 0 0; border-top: 0; }
+/* image dans un cadre creusé, comme l'aperçu de la ville */
+#il-img { display: block; box-sizing: border-box; width: calc(100% - 4px); margin: 0 2px 2px; aspect-ratio: 8 / 3;
+  object-fit: cover; background: #000; border: 1px solid; border-color: var(--ot-dark) var(--ot-light) var(--ot-light) var(--ot-dark); }
 #il-img.shot { aspect-ratio: auto; max-height: 40vh; object-fit: contain; }
-.il-caption { padding: 0 6px 4px; line-height: 1.35; }
+.il-caption { padding: 1px 4px 4px; }
 .il-caption:empty { display: none; }
-.il-nav { display: flex; align-items: center; gap: 6px; padding: 0 4px 4px; }
-.il-nav span { flex: 1; text-align: center; }
+.il-nav { display: flex; align-items: stretch; }
+.il-nav span { flex: 1; text-align: center; line-height: 14px; border: 1px solid;
+  border-color: var(--ot-light) var(--ot-dark) var(--ot-dark) var(--ot-light); }
 .il-nav[hidden] { display: none; }
+#illus .il-nav button { flex: 0 0 auto; height: 14px; padding: 0 8px; font: inherit; line-height: 12px; color: var(--ot-text);
+  background: var(--ot-face); cursor: pointer !important; }
+#illus button:active { border-color: var(--ot-dark) var(--ot-light) var(--ot-light) var(--ot-dark); }
+#illus #il-close:active { border-color: var(--ot-dark) var(--ot-light) var(--ot-light) var(--ot-dark); background-position: 4px 4px; }
 @media (max-width: 700px) { #illus { display: none; } }

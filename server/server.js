@@ -27,6 +27,8 @@ const MIME = {
   '.obs': 'text/plain; charset=utf-8',
   '.json': 'application/json',
   '.txt': 'text/plain; charset=utf-8',
+  '.ttf': 'font/ttf',
+  '.md': 'text/markdown; charset=utf-8',
 };
 
 function log(...args) { console.log(new Date().toISOString(), ...args); }

@@ -12,9 +12,12 @@
   <canvas id="canvas" class="emscripten" tabindex="0" oncontextmenu="event.preventDefault()"></canvas>
   <!-- illustration du projet ouvert (images du portfolio, chargées à la demande) -->
   <div id="illus" hidden>
-    <div class="il-title"><span id="il-title"></span><button type="button" id="il-close" title="Close">×</button></div>
-    <img id="il-img" alt="">
-    <div class="il-caption" id="il-caption"></div>
+    <!-- barre de titre façon OpenTTD : case de fermeture à gauche, titre centré -->
+    <div class="il-title"><button type="button" id="il-close" title="Close" aria-label="Close"></button><span id="il-title"></span></div>
+    <div class="il-body">
+      <img id="il-img" alt="">
+      <div class="il-caption" id="il-caption"></div>
+    </div>
     <div class="il-nav" id="il-nav"><button type="button" id="il-prev">&lt; Prev</button><span id="il-count"></span><button type="button" id="il-next">Next &gt;</button></div>
   </div>
   <!-- écran de chargement : fond noir, deux lignes en bas au centre (même gabarit que Cube 2) -->
