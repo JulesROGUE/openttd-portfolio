@@ -104,6 +104,7 @@ var OT = window.OT || (window.OT = {});
       p += 14;
       for (c = 0; c < nc; c++, p += 6) ps.children.push([a[p] >>> 0, a[p + 1] >>> 0, a[p + 2], a[p + 3], a[p + 4], a[p + 5]]);
       screenExtents(ps);
+      childrenExtents(ps);
       parents.push(ps);
     }
     return { tiles: tiles, parents: parents };
@@ -123,6 +124,25 @@ var OT = window.OT || (window.OT = {});
       ps.st = ps.top;
       ps.sr = ps.left + (spr ? spr.w : 0);
       ps.sb = ps.top + (spr ? spr.h : 0);
+    }
+  }
+
+  /**
+   * Les sprites « combinés » (StartSpriteCombine : plusieurs arbres d'une tuile, sprites
+   * d'un véhicule) sont relevés comme un parent et ses enfants. Dans le moteur, le parent
+   * est le premier sprite non découpé par la zone de dessin : un groupe doit donc être
+   * gardé dès que l'un de ses sprites touche la zone, pas seulement le premier.
+   */
+  function childrenExtents(ps) {
+    for (var c = 0; c < ps.children.length; c++) {
+      var cs = ps.children[c];
+      var spr = OT.data.sprites[cs[0] & OT.SPRITE_MASK];
+      if (!spr) continue;
+      var x = (cs[5] ? ps.left : ps.x) + cs[3] + spr.xo, y = (cs[5] ? ps.top : ps.y) + cs[4] + spr.yo;
+      if (x < ps.sl) ps.sl = x;
+      if (y < ps.st) ps.st = y;
+      if (x + spr.w > ps.sr) ps.sr = x + spr.w;
+      if (y + spr.h > ps.sb) ps.sb = y + spr.h;
     }
   }
 
