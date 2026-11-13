@@ -1,63 +1,17 @@
 /*
- * portfolio.js — coquille web minimale d'OpenTTD Portfolio.
- * L'interface est celle d'OpenTTD (patché) ; ce script ne fait que :
+ * portfolio.js — coquille web d'OpenTTD Portfolio.
+ * L'interface est celle d'OpenTTD, rejouée par le moteur JavaScript (ottd/*.js) ; ce
+ * script ne fait que :
  *  - afficher l'étape du chargement (moteur, données, préparation de la carte) ;
  *  - demander toutes les ressources avec ?v=<build> (caches navigateur et Cloudflare) ;
- *  - réveiller l'audio au premier clic (les navigateurs l'interdisent avant) :
- *    contexte Web Audio de SDL (bruitages) et synthé MIDI (musique, midisynth.js) ;
- *  - suivre la coupure globale du son du portfolio (applet KMix du bureau : clé
- *    localStorage « portfolioos:sounds-muted » et message « portfolioos:mute »),
- *    bloc repris tel quel de Cube 2 ;
- *  - télécharger les bruitages OpenSFX à ce moment-là seulement (13 Mo), puis
- *    demander au moteur de les utiliser (pf_load_sounds).
+ *  - afficher l'illustration du projet ouvert (images du portfolio).
+ * Aucun son : ni bruitages, ni musique.
  */
 (function () {
   'use strict';
 
-  // --- Coupure globale du son du portfolio (applet KMix du bureau) -----------
-  // Même origine que le portfolio : on lit sa clé de localStorage, on suit
-  // l'événement `storage` et le message `portfolioos:mute`. Tous les
-  // AudioContext créés par le moteur (sons et musique) sont suspendus tant que
-  // c'est coupé, et le moteur ne peut pas les relancer lui-même.
-  (function () {
-    var KEY = 'portfolioos:sounds-muted';
-    var AC = window.AudioContext || window.webkitAudioContext;
-    if (!AC || AC.__portfolioMute) return;
-    var contexts = [];
-    var muted = false;
-    try { muted = localStorage.getItem(KEY) === '1'; } catch (e) {}
-    var resume = AC.prototype.resume;
-    AC.prototype.resume = function () {
-      return muted ? Promise.resolve() : resume.call(this);
-    };
-    function Wrapped(opts) {
-      var ctx = opts === undefined ? new AC() : new AC(opts);
-      contexts.push(ctx);
-      if (muted) ctx.suspend();
-      return ctx;
-    }
-    Wrapped.prototype = AC.prototype;
-    Wrapped.__portfolioMute = true;
-    window.AudioContext = Wrapped;
-    window.webkitAudioContext = Wrapped;
-    function apply(value) {
-      muted = value;
-      contexts.forEach(function (ctx) {
-        if (ctx.state === 'closed') return;
-        if (muted) ctx.suspend(); else resume.call(ctx).catch(function () {});
-      });
-    }
-    window.addEventListener('storage', function (e) {
-      if (e.key === KEY) apply(e.newValue === '1');
-    });
-    window.addEventListener('message', function (e) {
-      if (e.origin === location.origin && e.data && e.data.type === 'portfolioos:mute') apply(!!e.data.muted);
-    });
-  })();
-
   var canvas = document.getElementById('canvas');
   var loading = document.getElementById('loading');
-  var basePath = location.pathname.replace(/[^\/]*$/, '');
 
   // --- Version du build et progression du chargement --------------------------
   var buildMeta = document.querySelector('meta[name="build"]');
@@ -65,7 +19,6 @@
   function versioned(path) { return BUILD ? path + '?v=' + BUILD : path; }
 
   // Écran de chargement minimal : « Chargement.. » puis l'étape en cours (n/3).
-  // Étapes : moteur (.wasm), données (paquet Emscripten), préparation de la carte.
   var stepEl = document.getElementById('ld-step');
   var STEPS = ['Moteur du jeu', 'Données du jeu', 'Préparation de la carte'];
   var step = 0, failed = false;
@@ -81,47 +34,6 @@
     stepEl.textContent = 'Échec du chargement : actualisez la page';
     loading.className = '';
   }
-
-  window.Module = {
-    preRun: [],
-    postRun: [],
-    arguments: [],
-    canvas: canvas,
-    locateFile: function (path) { return versioned(path); },
-    // Téléchargement du moteur (.wasm) en suivant sa progression
-    instantiateWasm: function (imports, receive) {
-      setStep(0);
-      fetch(versioned('openttd.wasm')).then(function (r) {
-        if (!r.ok) throw new Error('HTTP ' + r.status);
-        return r.arrayBuffer();
-      }).then(function (bytes) {
-        return WebAssembly.instantiate(bytes, imports);
-      }).then(function (out) {
-        setStep(1);
-        receive(out.instance, out.module);
-      }).catch(loadError);
-      return {};
-    },
-    print: function (t) { console.log(t); },
-    printErr: function (t) { console.warn(t); },
-    // Messages d'Emscripten : « Downloading data... (x/y) », « Running... »
-    setStatus: function (t) {
-      if (/Running/.test(t || '')) setStep(2);
-    },
-    // le paquet de données est arrivé : il ne reste qu'à préparer la carte
-    monitorRunDependencies: function (left) {
-      if (left === 0) setStep(2);
-    },
-    // appelé par le moteur (PortfolioAfterLoad) quand la carte est affichée
-    onGameReady: function () {
-      loading.className = 'done';
-      document.body.className = 'game-ready';   // le jeu dessine maintenant son curseur
-      canvas.focus();
-      console.log('[portfolio] carte prête');
-    },
-    onExit: function () { loadError('le jeu s\'est arrêté'); },
-    onAbort: function () { loadError('le jeu a planté'); },
-  };
 
   // --- Illustration du projet ouvert ------------------------------------------------
   // Exception accordée pour les illustrations : la couverture et les captures déjà
@@ -157,11 +69,11 @@
       .then(function (d) { illus.data = d; if (illus.id) illusRender(); })
       .catch(function (e) { console.warn('[illustrations] ' + e); });
   }
-  Module.onProjectOpen = function (id) {
+  OT.onProjectOpen = function (id) {
     illus.open = illus.open.filter(function (x) { return x !== id; }).concat([id]);
     illusShow(id);
   };
-  Module.onProjectClose = function (id) {
+  OT.onProjectClose = function (id) {
     illus.open = illus.open.filter(function (x) { return x !== id; });
     if (illus.id !== id) return;
     if (illus.open.length) illusShow(illus.open[illus.open.length - 1]);
@@ -179,49 +91,15 @@
   // les clics sur le panneau ne doivent pas atteindre la carte
   illusEl.addEventListener('mousedown', function (e) { e.stopPropagation(); });
 
-  // --- Son : rien avant le premier geste de l'utilisateur --------------------------
-  var soundsRequested = false, soundsLoaded = false;
-  function loadSounds() {
-    if (soundsRequested) return;
-    soundsRequested = true;
-    var files = ['opensfx.obs', 'opensfx.cat'];
-    console.log('[son] téléchargement des bruitages OpenSFX');
-    Promise.all(files.map(function (f) {
-      return fetch(versioned('sfx/' + f)).then(function (r) {
-        if (!r.ok) throw new Error(f + ' : HTTP ' + r.status);
-        return r.arrayBuffer();
-      });
-    })).then(function (bufs) {
-      Module.FS.mkdirTree('/baseset/opensfx');
-      files.forEach(function (f, i) { Module.FS.writeFile('/baseset/opensfx/' + f, new Uint8Array(bufs[i])); });
-      soundsLoaded = Module.ccall('pf_load_sounds', 'number', [], []) === 1;
-      console.log('[son] bruitages OpenSFX ' + (soundsLoaded ? 'actifs' : 'refusés par le moteur'));
-    }).catch(function (e) {
-      soundsRequested = false;
-      console.warn('[son] bruitages indisponibles : ' + e);
-    });
-  }
-
-  function wakeAudio() {
-    var sdl = Module.SDL2 && Module.SDL2.audioContext;
-    if (sdl && sdl.state === 'suspended') sdl.resume();
-    if (window.openttd_music) window.openttd_music.resume();
-    if (Module.calledRun) loadSounds();
-  }
-  ['pointerdown', 'keydown', 'touchstart'].forEach(function (type) {
-    document.addEventListener(type, wakeAudio, true);
-  });
-
-  /** État de l'audio, pour les tests et le débogage. */
-  window.pfAudioState = function () {
-    var sdl = Module.SDL2 && Module.SDL2.audioContext;
-    return {
-      sfxContext: sdl ? sdl.state : 'none',
-      sfxLoaded: soundsLoaded,
-      musicContext: window.openttd_music ? window.openttd_music.state() : 'none',
-      music: window.openttd_music ? window.openttd_music.current() : '',
-    };
-  };
+  // --- Démarrage ----------------------------------------------------------------------
+  setStep(0);
+  OT.loadData(versioned, function (n) { setStep(n + 1); }).then(function () {
+    OT.start(canvas);
+    loading.className = 'done';
+    document.body.className = 'game-ready'; // le jeu dessine maintenant son curseur
+    canvas.focus();
+    console.log('[portfolio] carte prête');
+  }).catch(loadError);
 
   // Flèches / Tab ne doivent pas faire défiler la page ni sortir de l'iframe.
   window.addEventListener('keydown', function (e) {

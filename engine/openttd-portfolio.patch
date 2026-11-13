@@ -1,61 +1,15 @@
-diff --git a/CMakeLists.txt b/CMakeLists.txt
-index 2891bee..ef62275 100644
---- a/CMakeLists.txt
-+++ b/CMakeLists.txt
-@@ -366,36 +366,13 @@ if(EMSCRIPTEN)
-     add_definitions(-s DISABLE_EXCEPTION_CATCHING=0)
- 
-     # Export functions to Javascript.
--    target_link_libraries(WASM::WASM INTERFACE "-s EXPORTED_FUNCTIONS='[\"_main\", \"_em_openttd_add_server\"]' -s EXPORTED_RUNTIME_METHODS='[\"cwrap\"]'")
--
--    # Preload all the files we generate during build.
--    # As we do not compile with FreeType / FontConfig, we also have no way to
--    # render several languages (like Chinese, ..), so where do you draw the
--    # line what languages to include and which not? In the end, especially as
--    # the more languages you add the slower downloading becomes, we decided to
--    # only ship the English language.
--    target_link_libraries(WASM::WASM INTERFACE "--preload-file ${CMAKE_BINARY_DIR}/baseset@/baseset")
--    target_link_libraries(WASM::WASM INTERFACE "--preload-file ${CMAKE_BINARY_DIR}/lang/english.lng@/lang/english.lng")
--    target_link_libraries(WASM::WASM INTERFACE "--preload-file ${CMAKE_SOURCE_DIR}/bin/ai@/ai")
--    target_link_libraries(WASM::WASM INTERFACE "--preload-file ${CMAKE_SOURCE_DIR}/bin/game@/game")
--    # Documentation files for the in-game text file viewer
--    target_link_libraries(WASM::WASM INTERFACE "--preload-file ${CMAKE_SOURCE_DIR}/README.md@/README.md")
--    target_link_libraries(WASM::WASM INTERFACE "--preload-file ${CMAKE_SOURCE_DIR}/CREDITS.md@/CREDITS.md")
--    target_link_libraries(WASM::WASM INTERFACE "--preload-file ${CMAKE_SOURCE_DIR}/CONTRIBUTING.md@/CONTRIBUTING.md")
--    target_link_libraries(WASM::WASM INTERFACE "--preload-file ${CMAKE_SOURCE_DIR}/COPYING.md@/COPYING.md")
--    target_link_libraries(WASM::WASM INTERFACE "--preload-file ${CMAKE_SOURCE_DIR}/known-bugs.md@/known-bugs.md")
--    target_link_libraries(WASM::WASM INTERFACE "--preload-file ${CMAKE_SOURCE_DIR}/changelog.md@/changelog.md")
--    target_link_libraries(WASM::WASM INTERFACE "--preload-file ${CMAKE_SOURCE_DIR}/docs/admin_network.md@/docs/admin_network.md")
--    target_link_libraries(WASM::WASM INTERFACE "--preload-file ${CMAKE_SOURCE_DIR}/docs/debugging_desyncs.md@/docs/debugging_desyncs.md")
--    target_link_libraries(WASM::WASM INTERFACE "--preload-file ${CMAKE_SOURCE_DIR}/docs/desync.md@/docs/desync.md")
--    target_link_libraries(WASM::WASM INTERFACE "--preload-file ${CMAKE_SOURCE_DIR}/docs/directory_structure.md@/docs/directory_structure.md")
--    target_link_libraries(WASM::WASM INTERFACE "--preload-file ${CMAKE_SOURCE_DIR}/docs/eints.md@/docs/eints.md")
--    target_link_libraries(WASM::WASM INTERFACE "--preload-file ${CMAKE_SOURCE_DIR}/docs/fonts.md@/docs/fonts.md")
--    target_link_libraries(WASM::WASM INTERFACE "--preload-file ${CMAKE_SOURCE_DIR}/docs/linkgraph.md@/docs/linkgraph.md")
--    target_link_libraries(WASM::WASM INTERFACE "--preload-file ${CMAKE_SOURCE_DIR}/docs/logging_and_performance_metrics.md@/docs/logging_and_performance_metrics.md")
--    target_link_libraries(WASM::WASM INTERFACE "--preload-file ${CMAKE_SOURCE_DIR}/docs/multiplayer.md@/docs/multiplayer.md")
--    target_link_libraries(WASM::WASM INTERFACE "--preload-file ${CMAKE_SOURCE_DIR}/docs/savegame_format.md@/docs/savegame_format.md")
--    target_link_libraries(WASM::WASM INTERFACE "--preload-file ${CMAKE_SOURCE_DIR}/docs/symbol_server.md@/docs/symbol_server.md")
-+    # OpenTTD Portfolio : pf_load_sounds (bruitages chargés après la carte), FS et ccall
-+    # pour la coquille web.
-+    target_link_libraries(WASM::WASM INTERFACE "-s EXPORTED_FUNCTIONS='[\"_main\", \"_em_openttd_add_server\", \"_pf_load_sounds\", \"_pf_test_house_point\", \"_pf_test_project_windows\", \"_pf_test_face\"]' -s EXPORTED_RUNTIME_METHODS='[\"cwrap\", \"ccall\", \"FS\"]'")
-+
-+    # OpenTTD Portfolio : les données (jeux de base, langue, carte, réglages) sont
-+    # empaquetées à part par scripts/build-web.sh (file_packager), comme pour Cube 2.
-+    target_link_libraries(WASM::WASM INTERFACE "-s FORCE_FILESYSTEM=1")
- 
-     # We use IDBFS for persistent storage.
-     target_link_libraries(WASM::WASM INTERFACE "-lidbfs.js")
 diff --git a/src/CMakeLists.txt b/src/CMakeLists.txt
-index 16215e7..b238e85 100644
+index 16215e7..5c900d9 100644
 --- a/src/CMakeLists.txt
 +++ b/src/CMakeLists.txt
-@@ -29,6 +29,12 @@ add_subdirectory(timer)
+@@ -29,6 +29,14 @@ add_subdirectory(timer)
  add_subdirectory(video)
  add_subdirectory(widgets)
  
 +add_files(
 +    portfolio_data.h
++    portfolio_export.cpp
++    portfolio_export.h
 +    portfolio_gui.cpp
 +    portfolio_gui.h
 +)
@@ -132,23 +86,6 @@ index f54c7d6..4872efb 100644
  	AllocateToolbar();
  
  	/* Status bad only for normal games */
-diff --git a/src/music/CMakeLists.txt b/src/music/CMakeLists.txt
-index cf60e78..7129629 100644
---- a/src/music/CMakeLists.txt
-+++ b/src/music/CMakeLists.txt
-@@ -37,6 +37,12 @@ if(NOT OPTION_DEDICATED)
-         CONDITION HAIKU
-     )
- 
-+    add_files(
-+        emscripten_m.cpp
-+        emscripten_m.h
-+        CONDITION EMSCRIPTEN
-+    )
-+
-     add_files(
-         midi.h
-         midifile.cpp
 diff --git a/src/news_gui.cpp b/src/news_gui.cpp
 index 9f92375..daf32a5 100644
 --- a/src/news_gui.cpp
@@ -207,6 +144,45 @@ index fa05885..ee9afc9 100644
  		switch (widget) {
  			case WID_S_MIDDLE: ShowLastNewsMessage(); break;
  			case WID_S_RIGHT:  if (_local_company != COMPANY_SPECTATOR) ShowCompanyFinances(_local_company); break;
+diff --git a/src/texteff.cpp b/src/texteff.cpp
+index 18c93ab..41b1b69 100644
+--- a/src/texteff.cpp
++++ b/src/texteff.cpp
+@@ -17,6 +17,8 @@
+ #include "timer/timer.h"
+ #include "timer/timer_window.h"
+ 
++#include "portfolio_export.h"
++
+ #include "safeguards.h"
+ 
+ /** Container for all information about a text effect */
+@@ -61,6 +63,9 @@ TextEffectID AddTextEffect(EncodedString &&msg, int center, int y, uint8_t durat
+ 	te.width_normal = 0;
+ 	te.UpdatePosition(center, y, te.msg.GetDecodedString());
+ 
++	/* OpenTTD Portfolio : relevé pour la version JavaScript. */
++	if (_pf_export_active) PortfolioExportTextEffect(0, static_cast<unsigned>(it - std::begin(_text_effects)), te.mode, te.center, te.top, te.width_normal, te.width_small, te.duration, te.msg.GetDecodedString());
++
+ 	return static_cast<TextEffectID>(it - std::begin(_text_effects));
+ }
+ 
+@@ -72,6 +77,7 @@ void UpdateTextEffect(TextEffectID te_id, EncodedString &&msg)
+ 	te.msg = std::move(msg);
+ 
+ 	te.UpdatePosition(te.center, te.top, te.msg.GetDecodedString());
++	if (_pf_export_active) PortfolioExportTextEffect(1, te_id, te.mode, te.center, te.top, te.width_normal, te.width_small, te.duration, te.msg.GetDecodedString());
+ }
+ 
+ void UpdateAllTextEffectVirtCoords()
+@@ -85,6 +91,7 @@ void UpdateAllTextEffectVirtCoords()
+ 
+ void RemoveTextEffect(TextEffectID te_id)
+ {
++	if (_pf_export_active) PortfolioExportTextEffect(2, te_id, 0, 0, 0, 0, 0, 0, {});
+ 	_text_effects[te_id].Reset();
+ }
+ 
 diff --git a/src/tile_cmd.h b/src/tile_cmd.h
 index 7ce4803..e1ffd75 100644
 --- a/src/tile_cmd.h
@@ -224,10 +200,28 @@ index 7ce4803..e1ffd75 100644
  	if (proc == nullptr) return false;
  	return proc(tile);
 diff --git a/src/viewport.cpp b/src/viewport.cpp
-index 6427a14..c0f5c60 100644
+index 6427a14..10074d5 100644
 --- a/src/viewport.cpp
 +++ b/src/viewport.cpp
-@@ -2347,6 +2347,17 @@ static bool CheckClickOnViewportSign(const Viewport &vp, int x, int y)
+@@ -98,6 +98,7 @@
+ 
+ #include "table/strings.h"
+ #include "table/string_colours.h"
++#include "portfolio_export.h"
+ 
+ #include "safeguards.h"
+ 
+@@ -2127,6 +2128,9 @@ void ConstrainAllViewportsZoom()
+  */
+ void MarkTileDirtyByTile(TileIndex tile, int bridge_level_offset, int tile_height_override)
+ {
++	/* OpenTTD Portfolio : relevé des tuiles qui changent (build de la version JavaScript). */
++	if (_pf_export_active) PortfolioExportTileDirty(tile.base());
++
+ 	Point pt = RemapCoords(TileX(tile) * TILE_SIZE, TileY(tile) * TILE_SIZE, tile_height_override * TILE_HEIGHT);
+ 	MarkAllViewportsDirty(
+ 			pt.x - MAX_TILE_EXTENT_LEFT,
+@@ -2347,6 +2351,17 @@ static bool CheckClickOnViewportSign(const Viewport &vp, int x, int y)
  		}
  	});
  
@@ -245,7 +239,7 @@ index 6427a14..c0f5c60 100644
  	/* Select which hit to handle based on priority */
  	if (last_st != nullptr) {
  		if (Station::IsExpected(last_st)) {
-@@ -2509,6 +2520,9 @@ bool HandleViewportClicked(const Viewport &vp, int x, int y)
+@@ -2509,6 +2524,9 @@ bool HandleViewportClicked(const Viewport &vp, int x, int y)
  	if (CheckClickOnViewportSign(vp, x, y)) return true;
  	bool result = CheckClickOnLandscape(vp, x, y);
  
@@ -255,6 +249,13 @@ index 6427a14..c0f5c60 100644
  	if (v != nullptr) {
  		Debug(misc, 2, "Vehicle {} (index {}) at {}", v->unitnumber, v->index, fmt::ptr(v));
  		if (IsCompanyBuildableVehicleType(v)) {
+@@ -3836,3 +3854,6 @@ void ViewportData::CancelFollow(const Window &viewport_window)
+ 
+ 	this->follow_vehicle = VehicleID::Invalid();
+ }
++
++/* OpenTTD Portfolio : relevé des listes de dessin pour la version JavaScript. */
++#include "portfolio_viewport_export.inc"
 diff --git a/src/window_type.h b/src/window_type.h
 index 67a23bc..8296e2f 100644
 --- a/src/window_type.h

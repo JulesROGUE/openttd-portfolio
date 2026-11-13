@@ -1,9 +1,11 @@
 # OpenTTD Portfolio — ProjectsLand, les projets de Jules ROGUE dans OpenTTD
 
-Une version **minimale et modifiée d'[OpenTTD](https://www.openttd.org) 15.3**, compilée en
-**WebAssembly** (Emscripten), qui sert d'application « Projets » au portfolio
+Une version **minimale et modifiée d'[OpenTTD](https://www.openttd.org) 15.3**, rejouée dans
+le navigateur par un **moteur JavaScript** (port du code de dessin et d'interface d'OpenTTD,
+sans WebAssembly), qui sert d'application « Projets » au portfolio
 [julesrogue.fr](https://julesrogue.fr). Le monde s'appelle **ProjectsLand** :
-**chaque ville est un projet**.
+**chaque ville est un projet**. L'application est **entièrement muette** : ni bruitages, ni
+musique.
 
 > Projet réalisé dans le cadre du BTS SIO option SLAM.
 
@@ -33,6 +35,9 @@ Une version **minimale et modifiée d'[OpenTTD](https://www.openttd.org) 15.3**,
   amène sur la ville). Déplacement : faire glisser la carte (ou flèches), zoom : molette.
 - Tout ce qui permet de construire ou de gérer est désactivé : raccourcis clavier,
   fenêtres des véhicules, des gares, des finances, actualités, console.
+- L'échelle de l'interface suit la taille de l'écran, comme OpenTTD en mode automatique
+  (100 % pour 640 × 480, par paliers de 25 % : 125 % dans la fenêtre du bureau du portfolio,
+  200 % en plein écran Full HD).
 
 Les libellés des boutons sont en anglais, comme le reste de l'interface d'OpenTTD ; les
 textes des projets sont en français.
@@ -80,53 +85,53 @@ portfolio** (`/images/projects/<id>/…`, déclarées dans les données des proj
 le paquet de données et ne servent qu'à illustrer les fiches : le jeu lui-même
 (graphismes, sons, musique) n'utilise que les ressources d'OpenTTD.
 
-## Son et musique
+## Moteur JavaScript (sans WebAssembly)
 
-Les navigateurs n'autorisent aucun son avant une interaction de l'utilisateur. Au
-**premier clic** (ou touche) dans le jeu, `web/portfolio.js` :
+Le navigateur n'exécute plus OpenTTD compilé en WebAssembly. Le rendu reste celui
+d'OpenTTD, au pixel près, grâce à un partage du travail :
 
-1. réveille le contexte Web Audio de SDL (pilote de son `sdl` d'OpenTTD) ;
-2. télécharge les **bruitages OpenSFX** (13 Mo, donc hors du chargement initial), les
-   copie dans `/baseset/opensfx` et appelle `pf_load_sounds()`, qui relit les jeux de
-   base et passe à OpenSFX à la place du jeu « NoSound » (`ChangeSoundSet`) ;
-3. réveille le synthétiseur de musique.
+1. **Pendant le build**, la version native du moteur patché (sans affichage ni son) charge
+   la carte et relève tout ce qu'elle dessinerait (`engine/src/portfolio_export.cpp`,
+   `engine/src/portfolio_viewport_export.inc`) :
+   - pour chaque tuile, la liste de dessin exacte de `ViewportAddLandscape()` (sprites au
+     sol, sprites triés avec leur boîte englobante, sprites enfants), aux deux niveaux de
+     détail (les décors des routes disparaissent au-delà du zoom Out2x) ;
+   - les sprites d'OpenGFX utilisés, décodés à chaque niveau de zoom exactement comme le
+     moteur les prépare (`ResizeSprites`), les tables de recoloriage, la palette et ses
+     tables d'animation (eau), les polices (glyphes et largeurs) ;
+   - **deux ans de partie, tick par tick** : sprites des bus (différences d'un tick à
+     l'autre), tuiles qui changent (arbres qui poussent...), textes flottants (indicateurs
+     de chargement, recettes), date et argent de la barre d'état ;
+   - la **mise en page exacte de chaque fenêtre** (chaque widget relevé avec
+     `GetWidgetFromPos`), à toutes les échelles d'interface de 100 % à 500 %, et le visage
+     de chaque collaborateur (liste des sprites de `DrawCompanyManagerFace`).
+2. **Dans le navigateur**, `web/ottd/` rejoue tout cela avec un port en JavaScript du code
+   d'OpenTTD : écran 8 bits et blitter (`gfx.js`), textes avec les polices en sprites
+   (`text.js`), vues de la carte avec le même parcours des tuiles, le même tri des sprites
+   (`ViewportSortParentSprites`), les panneaux des villes, le défilement doux et le zoom
+   (`viewport.js`), fenêtres, widgets, déplacement avec aimantation, placement automatique,
+   infobulles et zones à redessiner (`gui.js`), boucle à 27 ms par tick, animation de la
+   palette et curseur (`main.js`). La partie enregistrée est rejouée en boucle.
 
-**Musique** : OpenMSX est en MIDI, et OpenTTD n'a aucun pilote MIDI utilisable dans un
-navigateur (le portage Emscripten officiel est muet, `-mnull`). Ce projet ajoute donc un
-pilote de musique `emscripten` (`engine/src/music/emscripten_m.cpp`) : le morceau est lu
-par **le lecteur MIDI d'OpenTTD lui-même** (`MidiFile`), puis la suite des messages datés
-est confiée à `web/midisynth.js`, un **petit synthétiseur General MIDI en Web Audio** fait
-uniquement d'oscillateurs (sinus, triangle, carré, dent de scie, filtres, enveloppes) et
-de bruit calculé pour les percussions. Aucun échantillon ni banque de sons (SoundFont)
-n'est utilisé. Chaque morceau est **rendu à l'avance** dans des `OfflineAudioContext`
-(mono, 22,05 kHz, tranches de 8 s rendues bien plus vite que le temps réel, la première
-en ≈ 0,1 s), puis les tranches sont jouées bout à bout, programmées sur l'horloge audio :
-la lecture ne dépend ni de la boucle du jeu ni des minuteries du navigateur (onglet
-masqué), et aucune limite de polyphonie ne coupe de notes. Les deux derniers morceaux
-rendus restent en cache. Les morceaux s'enchaînent tout seuls grâce à la liste de lecture
-d'OpenTTD (tous les titres, ordre aléatoire) : le pilote indique au jeu quand un morceau
-est fini. Avant le premier clic, le morceau demandé reste en attente.
-
-**Coupure globale** : le jeu suit le bouton de son du bureau du portfolio (clé
-`localStorage['portfolioos:sounds-muted']`, événement `storage` et message
-`portfolioos:mute`). Tous les AudioContext (bruitages SDL et synthé) sont suspendus tant
-que le son est coupé, et le réveil au premier clic ne les rallume pas (bloc repris de
-Cube 2, en tête de `web/portfolio.js`).
+| Fichier | Taille | Transféré (gzip) |
+|---|---|---|
+| `world.bin` (listes de dessin, deux ans de partie) | ≈ 20 Mo | ≈ 1 Mo |
+| `sprites.bin` (sprites et glyphes d'OpenGFX) | ≈ 0,9 Mo | ≈ 0,23 Mo |
+| `world.json` (index, fenêtres, textes, palette) | ≈ 0,7 Mo | ≈ 0,11 Mo |
+| moteur JavaScript et coquille web | ≈ 0,1 Mo | ≈ 0,03 Mo |
+| **Chargement de la carte** | | **≈ 1,4 Mo** |
 
 ## Ressources : uniquement celles d'OpenTTD
 
 | Élément | Auteur | Licence | Utilisation |
 |---|---|---|---|
-| [OpenTTD 15.3](https://www.openttd.org) | L'équipe OpenTTD et ses contributeurs | GPL v2 | Moteur, modifié (patch + fichiers ajoutés) ; `openttd.grf`, `orig_extra.grf`, jeux « vides » |
-| [OpenGFX 8.0](https://github.com/OpenTTD/OpenGFX) | Les auteurs d'OpenGFX (Zephyris, Zuu, planetmaker, Rubidium… liste dans son readme) | GPL v2 | Graphismes et polices (climat tempéré) |
-| [OpenSFX 1.0.3](https://github.com/OpenTTD/OpenSFX) | Contributeurs d'OpenTTD, d'après des sons de freesound.org et pdsounds.org (détail dans son readme) | CC BY-SA 3.0 | Bruitages, chargés au premier clic |
-| [OpenMSX 0.4.2](https://github.com/OpenTTD/OpenMSX) | Les auteurs d'OpenMSX, 2010-2021 (détail dans `themes.list`) | GPL v2 | Musiques MIDI |
+| [OpenTTD 15.3](https://www.openttd.org) | L'équipe OpenTTD et ses contributeurs | GPL v2 | Moteur natif modifié (patch + fichiers ajoutés) qui génère et relève la carte ; code de dessin et d'interface porté en JavaScript (`web/ottd`) |
+| [OpenGFX 8.0](https://github.com/OpenTTD/OpenGFX) | Les auteurs d'OpenGFX (Zephyris, Zuu, planetmaker, Rubidium… liste dans son readme) | GPL v2 | Graphismes et polices (climat tempéré), licence servie avec les données (`opengfx-license.txt`) |
 
 Ces fichiers sont téléchargés pendant le build depuis le CDN officiel d'OpenTTD
-(`cdn.openttd.org`), avec des sommes SHA-256 épinglées (`scripts/fetch-sources.sh`). Les
-licences des jeux de base sont copiées à côté de leurs fichiers. Aucun autre asset
-(image, son, police, NewGRF) n'est créé ni importé : la carte est générée par OpenTTD
-lui-même, et les textes des projets sont de simples données.
+(`cdn.openttd.org`), avec des sommes SHA-256 épinglées (`scripts/fetch-sources.sh`). Aucun
+autre asset (image, son, musique, police, NewGRF) n'est créé ni importé : la carte est
+générée par OpenTTD lui-même, et les textes des projets sont de simples données.
 
 ## Fonctionnement
 
@@ -134,49 +139,45 @@ lui-même, et les textes des projets sont de simples données.
 data/projects.json ──► tools/gen_data.py ──► src/portfolio_data.h (fiches, collaborateurs)
                                          └─► gamescript/projects.nut (noms des villes)
 
-scripts/fetch-sources.sh   OpenTTD 15.3 + OpenGFX / OpenSFX / OpenMSX (SHA-256 vérifiés)
-scripts/prepare-src.sh     archive + engine/openttd-portfolio.patch + engine/src, engine/os
-scripts/build-engine.sh    OpenTTD natif (outils, génération de la carte) puis WebAssembly
-scripts/gen-map.sh         partie générée par la version native, sans affichage :
+scripts/fetch-sources.sh   OpenTTD 15.3 + OpenGFX (SHA-256 vérifiés)
+scripts/prepare-src.sh     archive + engine/openttd-portfolio.patch + engine/src
+scripts/build-engine.sh    OpenTTD natif (sans affichage ni son au lancement)
+scripts/gen-map.sh         partie générée par la version native :
                            graine fixe (-G 20260) + config/pregen.cfg + script de jeu PortfolioGS
-scripts/build-web.sh       carte + paquet de données + coquille web -> dist/openttd
+scripts/export-js.sh       relevé de la carte et de deux ans de partie pour le moteur JS
+                           (world.json, world.bin, sprites.bin)
+scripts/build-web.sh       carte + relevé + moteur JS + coquille web -> dist/openttd
 ```
 
 - **Carte** : `gamescript/main.nut` (GameScript Squirrel) renomme la ville créée par le
   générateur et fonde les autres à des emplacements fixes, les agrandit puis fige leur
   croissance, trace les routes avec un A* maison (ponts sur l'eau), construit les arrêts,
   un dépôt et achète les bus de la compagnie du joueur. La partie est enregistrée à la
-  sortie (`autosave_on_exit`) : c'est cette sauvegarde que charge le navigateur. Même
+  sortie (`autosave_on_exit`) : c'est cette sauvegarde que relève `export-js.sh`. Même
   graine et mêmes données ⇒ même carte.
 - **Patch du moteur** (`engine/openttd-portfolio.patch`, fichiers ajoutés dans
   `engine/src`) : barre d'outils supprimée, raccourcis et actualités désactivés, clic sur
   une maison et sur un nom de ville → fiche du projet, aucun clic sur véhicules, gares,
-  barre d'état ; fenêtres du portfolio (`portfolio_gui.cpp`) ; pilote de musique ;
-  `pre.js` (arguments : carte, réglages `config/openttd.cfg`, son SDL, musique).
+  barre d'état ; fenêtres du portfolio (`portfolio_gui.cpp`) ; relevé pour la version
+  JavaScript (`portfolio_export.cpp`, `portfolio_viewport_export.inc`, crochets dans
+  `viewport.cpp` et `texteff.cpp`, actifs seulement avec `OPENTTD_PORTFOLIO_EXPORT`).
+- **Moteur JavaScript** (`web/ottd/`) : voir plus haut. Les mêmes réglages que le jeu
+  (`config/openttd.cfg` : glisser la carte avec le bouton gauche, zoom à la molette de
+  In2x à Out4x, défilement doux, noms des villes) ; clic sur une maison ou un nom de ville,
+  flèches du clavier, touches C / Z (centrer, centrer et zoomer), Suppr (fermer les
+  fenêtres non épinglées), Maj+Suppr (toutes), Ctrl+R (tout redessiner).
 - **Coquille web** (`web/`) : écran de chargement minimal (fond noir, en bas au
   centre : « Chargement.. » puis « Moteur du jeu 1/3 », « Données du jeu 2/3 »,
   « Préparation de la carte 3/3 », même gabarit que Cube 2), ressources versionnées
-  `?v=<build>` (empreinte injectée par `build-web.sh`), réveil de l'audio. Le curseur du
-  navigateur est masqué au-dessus du jeu (OpenTTD dessine le sien) mais reste visible
-  pendant le chargement et au-dessus du panneau des illustrations.
+  `?v=<build>` (empreinte injectée par `build-web.sh`). Le curseur du navigateur est
+  masqué au-dessus du jeu (OpenTTD dessine le sien) mais reste visible pendant le
+  chargement et au-dessus du panneau des illustrations.
 - **Serveur** (`server/server.js`) : fichiers statiques sous `/openttd/`, gzip
   pré-calculé, `Cache-Control` long et immuable pour les ressources versionnées, `no-cache`
   pour le reste (Cloudflare est devant le site).
 
-## Taille du téléchargement
-
-| Fichier | Taille | Transféré (gzip) |
-|---|---|---|
-| `openttd.wasm` (moteur) | 10,3 Mo | 3,2 Mo |
-| `openttd.data` (OpenGFX tempéré, langue, carte, musiques MIDI) | 6,0 Mo | 3,4 Mo |
-| `openttd.js`, coquille web | 0,3 Mo | 0,07 Mo |
-| **Chargement de la carte** | **16,6 Mo** | **≈ 6,7 Mo** |
-| `sfx/opensfx.cat` (au premier clic seulement) | 13,2 Mo | 11,5 Mo |
-
-Pour alléger le paquet, seuls les fichiers d'OpenGFX du climat tempéré sont embarqués
-(`ogfx1_base`, `ogfxe_extra`, `ogfxi_logos`) : OpenTTD signale dans la console du
-navigateur que le jeu est « incomplet » (fichiers arctique, tropical et jouets absents),
-sans effet sur cette carte.
+Le relevé n'utilise que les fichiers d'OpenGFX du climat tempéré (`ogfx1_base`,
+`ogfxe_extra`, `ogfxi_logos`) : seuls les sprites réellement dessinés sont exportés.
 
 ## Construire et lancer
 
@@ -184,30 +185,33 @@ sans effet sur cette carte.
 docker compose up -d --build        # http://127.0.0.1:8084/openttd/
 ```
 
-Le build compile OpenTTD deux fois (natif puis WebAssembly) : compter une vingtaine de
-minutes sur 8 cœurs. Pour développer sans Docker Compose :
+Le build compile OpenTTD une fois, en natif (quelques minutes sur 8 cœurs), génère la
+carte puis la relève. Pour développer sans Docker Compose :
 
 ```bash
 docker build --target base -t openttd-portfolio-base -f docker/Dockerfile.web docker/
-docker run --rm -v $PWD:$PWD -w $PWD -u $(id -u):$(id -g) -e EM_CACHE=$PWD/build/emcache \
-  openttd-portfolio-base bash -c './scripts/fetch-sources.sh && ./scripts/build-engine.sh && ./scripts/build-web.sh'
+docker run --rm -v $PWD:$PWD -w $PWD -u $(id -u):$(id -g) openttd-portfolio-base \
+  bash -c './scripts/fetch-sources.sh && ./scripts/prepare-src.sh && ./scripts/build-engine.sh && ./scripts/build-web.sh'
 ```
+
+`TICKS=3000 ./scripts/export-js.sh build/native build/out/projectsland.sav <dossier>`
+relève une partie plus courte (essais rapides).
 
 Sur le serveur, le nginx de l'hôte (TLS) envoie `/openttd/` vers `127.0.0.1:8084`.
 
 ## Licence
 
 OpenTTD Portfolio est une version modifiée d'OpenTTD et est donc distribué sous la
-**GNU General Public License version 2** (fichier `LICENSE`), comme OpenTTD. Les jeux
-de base gardent leurs licences (tableau ci-dessus). Ce portfolio n'est ni affilié ni
-approuvé par l'équipe OpenTTD.
+**GNU General Public License version 2** (fichier `LICENSE`), comme OpenTTD ; le moteur
+JavaScript (`web/ottd/`) est un port du code d'OpenTTD et suit la même licence. OpenGFX
+garde sa licence (tableau ci-dessus). Ce portfolio n'est ni affilié ni approuvé par
+l'équipe OpenTTD.
 
 © 2026 Jules ROGUE pour les modifications et les fichiers ajoutés.
 
 ## Tests
 
-`tests/villes.js` (un clic sur une maison de chaque ville ouvre sa fiche) et
-`tests/audio.js` (audio suspendu avant le premier clic, puis bruitages et musique) se
-lancent avec Node et `playwright-core` contre un serveur local ou en ligne :
-`node tests/villes.js http://127.0.0.1:8084/openttd/ <dossier des captures>`.
-Ils utilisent les points d'entrée `pf_test_house_point` et `pf_test_project_windows`.
+`tests/villes.js` (un clic sur une maison de chaque ville ouvre sa fiche, puis la fenêtre
+des collaborateurs) se lance avec Node et `playwright-core` contre un serveur local ou en
+ligne : `node tests/villes.js http://127.0.0.1:8084/openttd/ <dossier des captures>`.
+Il utilise les points d'entrée `OT.testHousePoint` et `OT.testProjectWindows`.

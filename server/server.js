@@ -1,7 +1,7 @@
 /*
  * server.js — conteneur web d'OpenTTD Portfolio.
- * Sert le client (HTML/JS/WASM/données) sous le préfixe /openttd/ avec les bons types
- * MIME (application/wasm…), la compression gzip pré-calculée et des en-têtes de cache
+ * Sert le client (HTML/JS/données) sous le préfixe /openttd/ avec les bons types MIME,
+ * la compression gzip pré-calculée et des en-têtes de cache
  * adaptés à Cloudflare : ressources versionnées (?v=<build>) en cache long et immuable,
  * index.html et le reste revalidés à chaque visite.
  *
@@ -21,10 +21,7 @@ const MIME = {
   '.html': 'text/html; charset=utf-8',
   '.js': 'text/javascript; charset=utf-8',
   '.css': 'text/css; charset=utf-8',
-  '.wasm': 'application/wasm',
-  '.data': 'application/octet-stream',
-  '.cat': 'application/octet-stream',
-  '.obs': 'text/plain; charset=utf-8',
+  '.bin': 'application/octet-stream',
   '.json': 'application/json',
   '.txt': 'text/plain; charset=utf-8',
   '.ttf': 'font/ttf',

@@ -12,7 +12,7 @@
  *  - la fiche d'un projet, ouverte par un clic sur une maison (ou sur le nom) de sa ville ;
  *  - la fenêtre d'accueil, avec la liste des projets ;
  *  - la fenêtre des collaborateurs (tirés du champ « team » des données des projets) ;
- *  - le chargement différé des bruitages (OpenSFX) depuis la coquille web.
+ *  - les données relevées pour la version JavaScript (mises en page, visages, textes).
  * Les textes viennent de portfolio_data.h, généré depuis data/projects.json.
  */
 
@@ -30,9 +30,6 @@
 #include "map_func.h"
 #include "video/video_driver.hpp"
 #include "zoom_func.h"
-#include "base_media_base.h"
-#include "base_media_sounds.h"
-#include "sound_func.h"
 #include "debug.h"
 #include "company_manager_face.h"
 #include "core/random_func.hpp"
@@ -42,11 +39,14 @@
 #include "tile_map.h"
 #include "portfolio_gui.h"
 #include "portfolio_data.h"
+#include "portfolio_export.h"
+#include "statusbar_gui.h"
+#include "fontcache.h"
+#include "gfx_func.h"
+#include "company_base.h"
+#include "timer/timer_game_calendar.h"
+#include <map>
 #include "table/strings.h"
-
-#ifdef __EMSCRIPTEN__
-#	include <emscripten.h>
-#endif
 
 #include "safeguards.h"
 
@@ -168,24 +168,6 @@ struct PortfolioProjectWindow : Window {
 		this->flags.Set(WindowFlag::DisableVpScroll);
 		this->GetWidget<NWidgetViewport>(WID_PP_VIEWPORT)->InitializeViewport(this, this->town->xy, ScaleZoomGUI(ZoomLevel::Town));
 		this->SetWidgetDisabledState(WID_PP_LINK, this->project == nullptr || this->project->links.empty());
-#ifdef __EMSCRIPTEN__
-		/* la coquille web affiche l'illustration du projet à côté de la fiche */
-		if (this->project != nullptr) {
-			std::string id(this->project->id);
-			EM_ASM({ if (Module.onProjectOpen) Module.onProjectOpen(UTF8ToString($0)); }, id.c_str());
-		}
-#endif
-	}
-
-	void Close([[maybe_unused]] int data = 0) override
-	{
-#ifdef __EMSCRIPTEN__
-		if (this->project != nullptr) {
-			std::string id(this->project->id);
-			EM_ASM({ if (Module.onProjectClose) Module.onProjectClose(UTF8ToString($0)); }, id.c_str());
-		}
-#endif
-		this->Window::Close();
 	}
 
 	/**
@@ -474,10 +456,6 @@ static CompanyManagerFace PortfolioFace(const PortfolioCollaborator &c)
 			}
 		}
 	}
-#ifdef __EMSCRIPTEN__
-	extern void PortfolioTestFaceOverride(CompanyManagerFace &face);
-	PortfolioTestFaceOverride(face);
-#endif
 	return face;
 }
 
@@ -733,6 +711,11 @@ bool PortfolioClickTile(TileIndex tile)
 
 void PortfolioAfterLoad()
 {
+	/* Build de la version JavaScript : relevé de la carte (version native sans affichage). */
+	if (_game_mode == GM_NORMAL && PortfolioExportRequested()) {
+		PortfolioExportStart();
+		return;
+	}
 	if (_game_mode != GM_NORMAL || !VideoDriver::GetInstance()->HasGUI()) return;
 
 	/* Vue de départ : la ville centrale, un peu dézoomée. */
@@ -743,85 +726,268 @@ void PortfolioAfterLoad()
 		ScrollMainWindowToTile(center != nullptr ? center->xy : TileXY(Map::SizeX() / 2, Map::SizeY() / 2), true);
 	}
 	ShowPortfolioWelcome();
-
-#ifdef __EMSCRIPTEN__
-	/* la coquille web masque l'écran de chargement */
-	EM_ASM({ if (Module.onGameReady) Module.onGameReady(); });
-#endif
 }
 
-#ifdef __EMSCRIPTEN__
-/**
- * Appelé par la coquille web une fois OpenSFX copié dans /baseset/opensfx :
- * on relit les jeux de base et on passe aux bruitages d'OpenSFX.
- */
-extern "C" EMSCRIPTEN_KEEPALIVE int pf_load_sounds()
+/** Nom d'un type de widget (pour la version JavaScript). */
+static const char *PortfolioWidgetTypeName(WidgetType type)
 {
-	BaseSounds::FindSets();
-	for (int i = 0; i < BaseSounds::GetNumSets(); i++) {
-		const SoundsSet *set = BaseSounds::GetSet(i);
-		if (set->name == "OpenSFX" && set->GetNumMissing() == 0) {
-			ChangeSoundSet(i);
-			Debug(misc, 0, "Bruitages : {}", set->name);
-			return 1;
+	switch (type & WWT_MASK) {
+		case WWT_EMPTY: return "empty";
+		case WWT_PANEL: return "panel";
+		case WWT_INSET: return "inset";
+		case WWT_CAPTION: return "caption";
+		case WWT_CLOSEBOX: return "closebox";
+		case WWT_STICKYBOX: return "stickybox";
+		case WWT_SHADEBOX: return "shadebox";
+		case WWT_TEXTBTN: return "textbtn";
+		case NWID_VIEWPORT: return "viewport";
+		default: return "other";
+	}
+}
+
+/**
+ * Mise en page exacte d'une fenêtre : chaque widget (type, couleur, numéro, rectangle,
+ * infobulle), relevé point par point avec GetWidgetFromPos, dans l'ordre de dessin
+ * (un widget est dessiné avant ceux qu'il contient).
+ */
+static void PortfolioExportWindowLayout(PortfolioJson &json, const char *name, Window *w)
+{
+	std::map<const NWidgetCore *, Rect> found;
+	int step = std::max(1, _gui_scale / 100);
+	for (int y = 0; y < w->height; y += step) {
+		for (int x = 0; x < w->width; x += step) {
+			const NWidgetCore *nw = w->nested_root->GetWidgetFromPos(x, y);
+			if (nw != nullptr && found.find(nw) == found.end()) found[nw] = nw->GetCurrentRect();
 		}
 	}
-	Debug(misc, 0, "Bruitages : OpenSFX introuvable");
-	return 0;
+	std::vector<std::pair<const NWidgetCore *, Rect>> list(found.begin(), found.end());
+	std::sort(list.begin(), list.end(), [](const auto &a, const auto &b) {
+		/* les plus grands (conteneurs) d'abord, puis de haut en bas et de gauche à droite */
+		bool a_in_b = a.second.left >= b.second.left && a.second.right <= b.second.right && a.second.top >= b.second.top && a.second.bottom <= b.second.bottom;
+		bool b_in_a = b.second.left >= a.second.left && b.second.right <= a.second.right && b.second.top >= a.second.top && b.second.bottom <= a.second.bottom;
+		if (a_in_b != b_in_a) return b_in_a;
+		if (a.second.top != b.second.top) return a.second.top < b.second.top;
+		return a.second.left < b.second.left;
+	});
+	json.Key(name);
+	json.Open('{');
+	json.Key("width"); json.Num(w->width);
+	json.Key("height"); json.Num(w->height);
+	json.Key("left"); json.Num(w->left);
+	json.Key("top"); json.Num(w->top);
+	json.Key("widgets");
+	json.Open('[');
+	for (const auto &[nw, r] : list) {
+		json.Open('{');
+		json.Key("type"); json.Str(PortfolioWidgetTypeName(nw->type));
+		json.Key("colour"); json.Num(nw->colour);
+		json.Key("index"); json.Num(nw->GetIndex());
+		json.Key("rect");
+		json.Open('[');
+		json.Num(r.left); json.Num(r.top); json.Num(r.right); json.Num(r.bottom);
+		json.Close(']');
+		json.Key("tooltip"); json.Str(nw->GetToolTip() != INVALID_STRING_ID && nw->GetToolTip() != STR_NULL ? GetString(nw->GetToolTip()) : std::string{});
+		json.Key("push"); json.Bool((nw->type & WWB_PUSHBUTTON) != 0);
+		json.Key("disabled"); json.Bool(nw->IsDisabled());
+		json.Close('}');
+	}
+	json.Close(']');
+	json.Close('}');
 }
+
+/** Ouvre chaque fenêtre du portfolio dans le moteur natif et relève sa mise en page. */
+static void PortfolioExportWindowsAtScale(PortfolioJson &json)
+{
+	json.Key("gui_zoom"); json.Num(to_underlying(_gui_zoom));
+	json.Key("font_zoom"); json.Num(to_underlying(_font_zoom));
+
+	const WidgetDimensions &wd = WidgetDimensions::scaled;
+	json.Key("widget");
+	json.Open('{');
+	auto pad = [&](const char *name, const RectPadding &p) {
+		json.Key(name);
+		json.Open('[');
+		json.Num(p.left); json.Num(p.top); json.Num(p.right); json.Num(p.bottom);
+		json.Close(']');
+	};
+	pad("imgbtn", wd.imgbtn); pad("inset", wd.inset); pad("bevel", wd.bevel); pad("fullbevel", wd.fullbevel);
+	pad("framerect", wd.framerect); pad("frametext", wd.frametext); pad("matrix", wd.matrix);
+	pad("shadebox", wd.shadebox); pad("stickybox", wd.stickybox); pad("closebox", wd.closebox);
+	pad("captiontext", wd.captiontext); pad("modalpopup", wd.modalpopup);
+	json.Key("vsep_normal"); json.Num(wd.vsep_normal);
+	json.Key("vsep_wide"); json.Num(wd.vsep_wide);
+	json.Key("hsep_normal"); json.Num(wd.hsep_normal);
+	json.Key("hsep_wide"); json.Num(wd.hsep_wide);
+	json.Close('}');
+
+	json.Key("fonts");
+	json.Open('[');
+	for (FontSize fs = FS_BEGIN; fs < FS_END; fs++) {
+		json.Open('[');
+		json.Num(GetCharacterHeight(fs)); json.Num(FontCache::Get(fs)->GetAscender());
+		json.Close(']');
+	}
+	json.Close(']');
+
+	json.Key("windows");
+	json.Open('{');
+	Window *sb = FindWindowById(WC_STATUS_BAR, 0);
+	if (sb == nullptr) {
+		ShowStatusBar();
+		sb = FindWindowById(WC_STATUS_BAR, 0);
+	}
+	if (sb != nullptr) {
+		sb->ReInit();
+		PortfolioExportWindowLayout(json, "statusbar", sb);
+	}
+
+	Window *welcome = new PortfolioWelcomeWindow(_portfolio_welcome_desc);
+	PortfolioExportWindowLayout(json, "welcome", welcome);
+	welcome->Close();
+
+	for (size_t i = 0; i < _portfolio_projects.size(); i++) {
+		Town *t = TownOfProject(i);
+		if (t == nullptr) continue;
+		ShowPortfolioProject(t->index);
+		Window *w = FindWindowById(WC_PORTFOLIO_PROJECT, t->index);
+		if (w == nullptr) continue;
+		PortfolioExportWindowLayout(json, fmt::format("project{}", i).c_str(), w);
+		w->Close();
+	}
+
+	ShowPortfolioCollaborators();
+	if (Window *w = FindWindowById(WC_PORTFOLIO_COLLABORATORS, 0); w != nullptr) {
+		PortfolioExportWindowLayout(json, "collaborators", w);
+		w->Close();
+	}
+	for (size_t i = 0; i < _portfolio_collaborators.size(); i++) {
+		ShowPortfolioCollaborator(static_cast<uint>(i));
+		Window *w = FindWindowById(WC_PORTFOLIO_COLLABORATOR, static_cast<WindowNumber>(i));
+		if (w == nullptr) continue;
+		PortfolioExportWindowLayout(json, fmt::format("collaborator{}", i).c_str(), w);
+		w->Close();
+	}
+	Window::DeleteClosedWindows();
+	json.Close('}');
+}
+
 /**
- * Outils de test (scripts Playwright du dépôt) : position à l'écran d'une maison de la
- * ville d'un projet, et nombre de fiches de projet ouvertes.
- * @return (x << 16) | y en pixels du canvas, ou -1
+ * Mises en page à chaque échelle de l'interface : comme dans le navigateur, l'échelle
+ * suit la taille de l'écran (UpdateGUIZoom : 100 % pour 640 × 480, par paliers de 25 %).
  */
-extern "C" EMSCRIPTEN_KEEPALIVE int pf_test_house_point(int project)
+static void PortfolioExportWindows(PortfolioJson &json)
 {
-	Town *t = TownOfProject(project);
-	Window *w = GetMainWindow();
-	if (t == nullptr || w == nullptr || w->viewport == nullptr) return -1;
-	const Viewport &vp = *w->viewport;
-	TileIndex best = INVALID_TILE;
-	uint bestd = UINT_MAX;
-	for (TileIndex tile : Map::Iterate()) {
-		if (!IsTileType(tile, MP_HOUSE) || GetTownIndex(tile) != t->index) continue;
-		uint d = DistanceManhattan(tile, t->xy);
-		if (d < bestd) { bestd = d; best = tile; }
+	json.Key("scales");
+	json.Open('{');
+	int saved = _gui_scale_cfg;
+	for (int scale = MIN_INTERFACE_SCALE; scale <= MAX_INTERFACE_SCALE; scale += 25) {
+		_gui_scale_cfg = scale;
+		if (AdjustGUIZoom(false)) ReInitAllWindows(true);
+		json.Key(fmt::format("{}", scale));
+		json.Open('{');
+		PortfolioExportWindowsAtScale(json);
+		json.Close('}');
 	}
-	if (best == INVALID_TILE) return -1;
-	Point pt = RemapCoords(TileX(best) * TILE_SIZE + TILE_SIZE / 2, TileY(best) * TILE_SIZE + TILE_SIZE / 2, GetTileMaxZ(best) * TILE_HEIGHT);
-	int x = UnScaleByZoom(pt.x - vp.virtual_left, vp.zoom) + vp.left;
-	int y = UnScaleByZoom(pt.y - vp.virtual_top, vp.zoom) + vp.top;
-	if (x < 0 || y < 0 || x >= _screen.width || y >= _screen.height) return -1;
-	return (x << 16) | y;
+	_gui_scale_cfg = saved;
+	_gui_scale_cfg = MIN_INTERFACE_SCALE;
+	if (AdjustGUIZoom(false)) ReInitAllWindows(true);
+	_gui_scale_cfg = saved;
+	json.Close('}');
 }
 
-extern "C" EMSCRIPTEN_KEEPALIVE int pf_test_project_windows()
+/**
+ * Données du portfolio pour la version JavaScript : projets, collaborateurs (avec la liste
+ * des sprites de leur visage, comme DrawCompanyManagerFace), ville de chaque projet, textes.
+ */
+void PortfolioExportData(PortfolioJson &json, std::set<uint32_t> &sprites, std::set<uint32_t> &palettes)
 {
-	int n = 0;
-	for (const Window *w : Window::Iterate()) {
-		if (w->window_class == WC_PORTFOLIO_PROJECT) n++;
+	PortfolioExportWindows(json);
+
+	json.Key("portfolio");
+	json.Open('{');
+	json.Key("intro"); json.Str(PORTFOLIO_INTRO);
+	json.Key("help"); json.Str(PORTFOLIO_HELP);
+	json.Key("collaborators_intro"); json.Str(PORTFOLIO_COLLABORATORS_INTRO);
+	json.Key("text_width"); json.Num(PORTFOLIO_TEXT_WIDTH);
+	json.Key("center_project"); json.Num(PORTFOLIO_CENTER_PROJECT);
+
+	json.Key("projects");
+	json.Open('[');
+	for (size_t i = 0; i < _portfolio_projects.size(); i++) {
+		const PortfolioProject &p = _portfolio_projects[i];
+		json.Open('{');
+		json.Key("id"); json.Str(p.id);
+		json.Key("title"); json.Str(p.title);
+		json.Key("subtitle"); json.Str(p.subtitle);
+		json.Key("type"); json.Str(p.type);
+		json.Key("summary"); json.Str(p.summary);
+		json.Key("highlights");
+		json.Open('[');
+		for (const auto &h : p.highlights) json.Str(h);
+		json.Close(']');
+		json.Key("stack"); json.Str(p.stack);
+		json.Key("team"); json.Str(p.team);
+		json.Key("links");
+		json.Open('[');
+		for (const auto &l : p.links) {
+			json.Open('{');
+			json.Key("label"); json.Str(l.label);
+			json.Key("url"); json.Str(l.url);
+			json.Close('}');
+		}
+		json.Close(']');
+		json.Key("note"); json.Str(p.note);
+		const Town *t = TownOfProject(i);
+		json.Key("town"); json.Num(t != nullptr ? t->index.base() : -1);
+		json.Close('}');
 	}
-	return n;
-}
+	json.Close(']');
 
-/* Aperçu des variantes de visages (tests) : impose une pièce à tous les avatars. */
-static int _pf_test_face_part = -1, _pf_test_face_value = 0;
+	json.Key("collaborators");
+	json.Open('[');
+	for (const PortfolioCollaborator &c : _portfolio_collaborators) {
+		json.Open('{');
+		json.Key("name"); json.Str(c.name);
+		json.Key("projects");
+		json.Open('[');
+		for (size_t i : c.projects) json.Num(i);
+		json.Close(']');
 
-void PortfolioTestFaceOverride(CompanyManagerFace &face)
-{
-	if (_pf_test_face_part < 0) return;
-	static const StringID parts[] = { STR_FACE_HAIR, STR_FACE_JACKET, STR_FACE_COLLAR, STR_FACE_CHIN, STR_FACE_TIE };
-	if (_pf_test_face_part >= static_cast<int>(std::size(parts))) return;
-	for (const FaceVar &var : GetCompanyManagerFaceVars(face.style)) {
-		if (var.name == parts[_pf_test_face_part] && var.type == FaceVarType::Sprite) var.SetBits(face, _pf_test_face_value % var.valid_values);
+		/* Visage : fond (dégradé recolorié) puis pièces, comme DrawCompanyManagerFace(). */
+		CompanyManagerFace face = PortfolioFace(c);
+		PaletteID bg = GetColourPalette(PortfolioFaceColour(c.name));
+		json.Key("face");
+		json.Open('[');
+		json.Num(SPR_GRADIENT); json.Num(bg);
+		sprites.insert(SPR_GRADIENT);
+		palettes.insert(bg);
+		FaceVars vars = GetCompanyManagerFaceVars(face.style);
+		uint64_t active_vars = GetActiveFaceVars(face, vars);
+		std::unordered_map<uint8_t, PaletteID> face_palettes;
+		for (auto var : SetBitIterator(active_vars)) {
+			if (vars[var].type != FaceVarType::Palette) continue;
+			PaletteID pal = PAL_NONE;
+			switch (vars[var].GetBits(face)) {
+				default: NOT_REACHED();
+				case 0: pal = PALETTE_TO_BROWN; break;
+				case 1: pal = PALETTE_TO_BLUE;  break;
+				case 2: pal = PALETTE_TO_GREEN; break;
+			}
+			for (uint8_t affected_var : SetBitIterator(std::get<uint64_t>(vars[var].data))) face_palettes[affected_var] = pal;
+		}
+		for (auto var : SetBitIterator(active_vars)) {
+			if (vars[var].type != FaceVarType::Sprite) continue;
+			auto it = face_palettes.find(var);
+			PaletteID pal = (it == std::end(face_palettes)) ? PAL_NONE : it->second;
+			SpriteID spr = vars[var].GetSprite(face);
+			json.Num(spr); json.Num(pal);
+			sprites.insert(spr);
+			if (pal != PAL_NONE) palettes.insert(pal);
+		}
+		json.Close(']');
+		json.Close('}');
 	}
+	json.Close(']');
+	json.Close('}');
 }
 
-extern "C" EMSCRIPTEN_KEEPALIVE void pf_test_face(int part, int value, int collaborator)
-{
-	_pf_test_face_part = part;
-	_pf_test_face_value = value;
-	CloseWindowById(WC_PORTFOLIO_COLLABORATOR, collaborator);
-	ShowPortfolioCollaborator(collaborator);
-}
-#endif

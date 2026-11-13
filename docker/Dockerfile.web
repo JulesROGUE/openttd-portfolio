@@ -1,33 +1,30 @@
-# Conteneur web d'OpenTTD Portfolio : OpenTTD 15.3 compilé en WebAssembly (Emscripten),
-# carte générée pendant le build par une version native du même moteur, puis servie
-# par un petit serveur Node (fichiers statiques, gzip pré-calculé, en-têtes de cache).
+# Conteneur web d'OpenTTD Portfolio : le navigateur exécute un port JavaScript du moteur
+# (web/ottd), sans WebAssembly. Pendant le build, une version native d'OpenTTD 15.3 patchée
+# génère la carte et relève tout ce que le moteur JavaScript rejoue (scripts/export-js.sh) ;
+# le tout est servi par un petit serveur Node (fichiers statiques, gzip pré-calculé, cache).
 
-# Version d'Emscripten validée par OpenTTD (os/emscripten/Dockerfile)
-FROM emscripten/emsdk:3.1.57 AS base
+FROM debian:bookworm AS base
 RUN apt-get update && apt-get install -y --no-install-recommends \
-      gcc-12 g++-12 libsdl2-dev zlib1g-dev liblzma-dev libpng-dev curl ca-certificates patch \
- && update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-12 100 \
- && update-alternatives --install /usr/bin/g++ g++ /usr/bin/g++-12 100 \
+      build-essential cmake python3 zlib1g-dev liblzma-dev libpng-dev libsdl2-dev curl ca-certificates patch xz-utils \
  && rm -rf /var/lib/apt/lists/*
 
 FROM base AS build
 WORKDIR /src
-# 0) sources d'OpenTTD et jeux de base officiels (sommes SHA-256 épinglées)
+# 0) sources d'OpenTTD et OpenGFX (sommes SHA-256 épinglées)
 COPY scripts/fetch-sources.sh ./scripts/
 RUN ./scripts/fetch-sources.sh
-# 1) moteur patché : version native (outils + génération de la carte) puis WebAssembly
-#    (les données des projets sont compilées dans le moteur : src/portfolio_data.h)
+# 1) moteur patché, en natif (les données des projets sont compilées dans le moteur)
 COPY engine/ ./engine/
 COPY data/ ./data/
 COPY tools/ ./tools/
 COPY gamescript/ ./gamescript/
 COPY scripts/ ./scripts/
 RUN ./scripts/prepare-src.sh && ./scripts/build-engine.sh
-# 2) carte (script de jeu), paquet de données, coquille web
+# 2) carte (script de jeu), relevé pour le moteur JavaScript, coquille web
 COPY config/ ./config/
 COPY web/ ./web/
 RUN ./scripts/build-web.sh \
- && cd dist/openttd && find . -type f \( -name '*.wasm' -o -name '*.data' -o -name '*.js' -o -name '*.html' -o -name '*.css' -o -name '*.json' -o -name '*.cat' -o -name '*.obs' -o -name '*.ttf' \) -exec gzip -9 -k {} \;
+ && cd dist/openttd && find . -type f \( -name '*.bin' -o -name '*.js' -o -name '*.html' -o -name '*.css' -o -name '*.json' -o -name '*.ttf' \) -exec gzip -9 -k {} \;
 
 FROM node:22-alpine
 WORKDIR /app

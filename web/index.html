@@ -9,7 +9,7 @@
   <link rel="stylesheet" href="portfolio.css?v=__BUILD__">
 </head>
 <body>
-  <canvas id="canvas" class="emscripten" tabindex="0" oncontextmenu="event.preventDefault()"></canvas>
+  <canvas id="canvas" tabindex="0" oncontextmenu="event.preventDefault()"></canvas>
   <!-- illustration du projet ouvert (images du portfolio, chargées à la demande) -->
   <div id="illus" hidden>
     <!-- barre de titre façon OpenTTD : case de fermeture à gauche, titre centré -->
@@ -24,9 +24,13 @@
   <div id="loading">
     <div class="ld-text"><div>Chargement..</div><div id="ld-step">Moteur du jeu 1/3</div></div>
   </div>
-  <script src="midisynth.js?v=__BUILD__"></script>
+  <!-- moteur JavaScript (port d'OpenTTD 15.3, sans WebAssembly ni son) -->
+  <script src="ottd/gfx.js?v=__BUILD__"></script>
+  <script src="ottd/text.js?v=__BUILD__"></script>
+  <script src="ottd/data.js?v=__BUILD__"></script>
+  <script src="ottd/viewport.js?v=__BUILD__"></script>
+  <script src="ottd/gui.js?v=__BUILD__"></script>
+  <script src="ottd/main.js?v=__BUILD__"></script>
   <script src="portfolio.js?v=__BUILD__"></script>
-  <script src="openttd-data.js?v=__BUILD__"></script>
-  <script src="openttd.js?v=__BUILD__" async></script>
 </body>
 </html>
