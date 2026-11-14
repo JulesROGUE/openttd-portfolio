@@ -124,7 +124,7 @@
     "highlights": [
       "Gestionnaire de fenêtres maison (déplacement, redimensionnement, plein écran, effet « genie »)",
       "API REST Node/Express, sessions par jeton, mots de passe hachés (scrypt)",
-      "Comptes invités purgés automatiquement, salon de discussion façon IRC (Kanal) avec réponses",
+      "Comptes invités purgés automatiquement, salon de discussion façon IRC avec réponses",
       "Déploiement Docker Compose derrière nginx en HTTPS"
     ],
     "stack": [
