@@ -635,10 +635,12 @@ var OT = window.OT || (window.OT = {});
   };
 
   // --- Fiche d'un projet ---------------------------------------------------------
-  OT.showPortfolioProject = function (townId) {
+  OT.showPortfolioProject = function (townId, pos) {
     if (bringWindowToFrontById('project', townId)) return;
     var t = townById(townId);
     if (!t) return;
+    // une seule fiche de projet à la fois : ouvrir un autre projet ferme la précédente
+    OT.windows.filter(function (o) { return o.cls === 'project'; }).forEach(function (o) { OT.closeWindow(o); });
     var pi = projectOfTown(townId);
     var p = pi >= 0 ? OT.data.portfolio.projects[pi] : null;
     var key = OT.data.windows['project' + pi] ? 'project' + pi : 'project0';
@@ -650,6 +652,8 @@ var OT = window.OT || (window.OT = {});
     w.caption = function () { return p ? p.title : t.name; };
     w.widgetString = function (i) {
       var s = OT.data.strings;
+      if (i === 6) return s.previous_project || '<';
+      if (i === 7) return s.next_project || '>';
       return i === 3 ? s.show_on_map : (i === 4 ? s.open_link : (i === 5 ? s.collaborators : ''));
     };
     w.drawWidget = function (r, index) {
@@ -678,6 +682,14 @@ var OT = window.OT || (window.OT = {});
           if (pt.x >= a.left && pt.x <= a.right && pt.y >= a.top && pt.y <= a.bottom) { openBrowser(a.url); break; }
         }
       } else if (index === 5) OT.showPortfolioCollaborators();
+      else if ((index === 6 || index === 7) && pi >= 0) {
+        // projet précédent / suivant (en boucle), à la place de cette fiche
+        var n = OT.data.portfolio.projects.length;
+        var t2 = townById(OT.data.portfolio.projects[(pi + (index === 7 ? 1 : n - 1)) % n].town);
+        if (!t2) return;
+        OT.scrollMainWindowToTile({ x: t2.x, y: t2.y });
+        OT.showPortfolioProject(t2.id, { x: this.left, y: this.top });
+      }
     };
     w.onReposition = function () {
       // OnResize : l'aperçu suit son widget et reste centré sur la ville
@@ -693,7 +705,9 @@ var OT = window.OT || (window.OT = {});
     var welcome = findWindowById('welcome', 0);
     if (welcome) top = welcome.top + welcome.height + S(6);
     if (top + w.height > OT.screen.height - S(16)) top = Math.max(0, OT.screen.height - S(16) - w.height);
-    placeWindow(w, { x: S(8), y: top });
+    // navigation « < » / « > » : la nouvelle fiche prend la place de l'ancienne (sans sortir de l'écran)
+    if (pos) pos = { x: pos.x, y: Math.max(0, Math.min(pos.y, OT.screen.height - S(16) - w.height)) };
+    placeWindow(w, pos || { x: S(8), y: top });
     var vpw = getWidget(w, 1);
     OT.initializeViewport(w, vpw.r.left, vpw.r.top, vpw.r.right - vpw.r.left + 1, vpw.r.bottom - vpw.r.top + 1, { x: t.x, y: t.y }, OT.guiZoom);
     w.disableVpScroll = true;

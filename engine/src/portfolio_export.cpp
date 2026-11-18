@@ -487,6 +487,8 @@ static void ExportGui(PortfolioJson &json)
 	str("open_project", STR_PORTFOLIO_OPEN_PROJECT);
 	str("open_project_tip", STR_PORTFOLIO_OPEN_PROJECT_TOOLTIP);
 	str("project_list_tip", STR_PORTFOLIO_PROJECT_LIST_TOOLTIP);
+	str("previous_project", STR_PORTFOLIO_PREVIOUS_PROJECT);
+	str("next_project", STR_PORTFOLIO_NEXT_PROJECT);
 	str("ellipsis", STR_TRUNCATION_ELLIPSIS);
 	json.Close('}');
 }

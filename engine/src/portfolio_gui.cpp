@@ -124,6 +124,8 @@ enum PortfolioProjectWidgets : WidgetID {
 	WID_PP_CENTER,
 	WID_PP_LINK,
 	WID_PP_COLLABORATORS,
+	WID_PP_PREVIOUS, ///< projet précédent
+	WID_PP_NEXT,     ///< projet suivant
 };
 
 static const int PORTFOLIO_TEXT_WIDTH = 420; ///< largeur du texte (pixels « traditionnels »)
@@ -140,10 +142,14 @@ static constexpr std::initializer_list<NWidgetPart> _nested_portfolio_project_wi
 		EndContainer(),
 	EndContainer(),
 	NWidget(WWT_PANEL, COLOUR_BROWN, WID_PP_TEXT), SetFill(1, 0), EndContainer(),
-	NWidget(NWID_HORIZONTAL, NWidContainerFlag::EqualSize),
-		NWidget(WWT_PUSHTXTBTN, COLOUR_BROWN, WID_PP_CENTER), SetFill(1, 1), SetStringTip(STR_PORTFOLIO_SHOW_ON_MAP, STR_PORTFOLIO_SHOW_ON_MAP_TOOLTIP),
-		NWidget(WWT_PUSHTXTBTN, COLOUR_BROWN, WID_PP_LINK), SetFill(1, 1), SetStringTip(STR_PORTFOLIO_OPEN_LINK, STR_PORTFOLIO_OPEN_LINK_TOOLTIP),
-		NWidget(WWT_PUSHTXTBTN, COLOUR_BROWN, WID_PP_COLLABORATORS), SetFill(1, 1), SetStringTip(STR_PORTFOLIO_COLLABORATORS, STR_PORTFOLIO_COLLABORATORS_TOOLTIP),
+	NWidget(NWID_HORIZONTAL),
+		NWidget(WWT_PUSHTXTBTN, COLOUR_BROWN, WID_PP_PREVIOUS), SetMinimalSize(24, 0), SetFill(0, 1), SetStringTip(STR_PORTFOLIO_PREVIOUS_PROJECT, STR_PORTFOLIO_PREVIOUS_PROJECT_TOOLTIP),
+		NWidget(NWID_HORIZONTAL, NWidContainerFlag::EqualSize),
+			NWidget(WWT_PUSHTXTBTN, COLOUR_BROWN, WID_PP_CENTER), SetFill(1, 1), SetStringTip(STR_PORTFOLIO_SHOW_ON_MAP, STR_PORTFOLIO_SHOW_ON_MAP_TOOLTIP),
+			NWidget(WWT_PUSHTXTBTN, COLOUR_BROWN, WID_PP_LINK), SetFill(1, 1), SetStringTip(STR_PORTFOLIO_OPEN_LINK, STR_PORTFOLIO_OPEN_LINK_TOOLTIP),
+			NWidget(WWT_PUSHTXTBTN, COLOUR_BROWN, WID_PP_COLLABORATORS), SetFill(1, 1), SetStringTip(STR_PORTFOLIO_COLLABORATORS, STR_PORTFOLIO_COLLABORATORS_TOOLTIP),
+		EndContainer(),
+		NWidget(WWT_PUSHTXTBTN, COLOUR_BROWN, WID_PP_NEXT), SetMinimalSize(24, 0), SetFill(0, 1), SetStringTip(STR_PORTFOLIO_NEXT_PROJECT, STR_PORTFOLIO_NEXT_PROJECT_TOOLTIP),
 	EndContainer(),
 };
 
@@ -281,6 +287,19 @@ struct PortfolioProjectWindow : Window {
 				break;
 			}
 			case WID_PP_COLLABORATORS: ShowPortfolioCollaborators(); break;
+			case WID_PP_PREVIOUS:
+			case WID_PP_NEXT: {
+				/* projet précédent / suivant (en boucle) : la fiche actuelle se ferme */
+				if (this->project == nullptr || _portfolio_projects.empty()) break;
+				size_t n = _portfolio_projects.size();
+				size_t i = static_cast<size_t>(this->project - _portfolio_projects.data());
+				size_t j = widget == WID_PP_NEXT ? (i + 1) % n : (i + n - 1) % n;
+				Town *t = TownOfProject(j);
+				if (t == nullptr) break;
+				ScrollMainWindowToTile(t->xy);
+				ShowPortfolioProject(t->index);
+				return; // cette fenêtre vient d'être fermée
+			}
 		}
 	}
 };
@@ -288,6 +307,8 @@ struct PortfolioProjectWindow : Window {
 void ShowPortfolioProject(TownID town)
 {
 	if (!Town::IsValidID(town)) return;
+	/* une seule fiche de projet à la fois : ouvrir un autre projet ferme la précédente */
+	if (FindWindowById(WC_PORTFOLIO_PROJECT, town) == nullptr) CloseWindowByClass(WC_PORTFOLIO_PROJECT);
 	AllocateWindowDescFront<PortfolioProjectWindow>(_portfolio_project_desc, town);
 }
 

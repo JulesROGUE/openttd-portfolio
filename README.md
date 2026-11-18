@@ -22,7 +22,11 @@ musique.
   sous-titre, type, résumé, points forts, technologies, équipe, liens. Chaque lien du
   projet (champ `links`, http/https uniquement, vérifié à la génération) est **cliquable
   dans le texte** : bleu clair souligné, blanc au survol, ouverture dans un nouvel onglet
-  (`noopener`). Boutons : *Show on map*, *Open link* (premier lien), *Collaborators*.
+  (`noopener`). Boutons : *Show on map*, *Open link* (premier lien), *Collaborators*, et
+  **« < » / « > »** aux deux bouts de la rangée pour passer au projet précédent / suivant
+  (en boucle). **Une seule fiche de projet à la fois** : ouvrir un autre projet (carte, liste
+  de la fenêtre d'accueil, fiche d'un collaborateur, « < » / « > ») ferme la précédente, et la
+  nouvelle prend sa place quand on navigue avec « < » / « > ».
 - **Collaborateurs** : bouton *Collaborators* (fiche d'un projet ou fenêtre d'accueil),
   puis un clic sur un nom ouvre la **fiche du collaborateur**, comme la fenêtre d'une
   compagnie : son **avatar** est un visage de président dessiné par le moteur
